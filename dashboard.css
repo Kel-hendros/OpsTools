@@ -1,0 +1,142 @@
+:root {
+    --bg: #0e1117;
+    --surface: #161b22;
+    --surface-hover: #1c2333;
+    --border: rgba(255, 255, 255, 0.08);
+    --text-primary: #e6edf3;
+    --text-secondary: #8b949e;
+    --accent: #58a6ff;
+    --font-main: 'Outfit', sans-serif;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--text-primary);
+    font-family: var(--font-main);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* --- Header --- */
+
+.dashboard-header {
+    padding: 3rem 2rem 2rem;
+    text-align: center;
+}
+
+.logo {
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+}
+
+.tagline {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    font-weight: 300;
+    margin-top: 0.25rem;
+}
+
+/* --- Tools Grid --- */
+
+.tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.25rem;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 1rem 2rem 3rem;
+}
+
+/* --- Tool Card --- */
+
+.tool-card {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--card-accent, var(--accent));
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+    cursor: pointer;
+}
+
+.tool-card:hover {
+    background: var(--surface-hover);
+    border-color: rgba(255, 255, 255, 0.12);
+    transform: translateY(-2px);
+}
+
+.tool-card:hover .tool-card-arrow {
+    opacity: 1;
+}
+
+.tool-card-icon {
+    font-size: 2.5rem;
+    flex-shrink: 0;
+    width: 56px;
+    text-align: center;
+    line-height: 1;
+}
+
+.tool-card-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.tool-card-name {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin-bottom: 0.15rem;
+}
+
+.tool-card-subtitle {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+}
+
+.tool-card-desc {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.tool-card-arrow {
+    font-size: 1.25rem;
+    color: var(--text-secondary);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    flex-shrink: 0;
+}
+
+/* --- Responsive --- */
+
+@media (max-width: 480px) {
+    .dashboard-header {
+        padding: 2rem 1rem 1.5rem;
+    }
+
+    .tools-grid {
+        grid-template-columns: 1fr;
+        padding: 1rem;
+    }
+
+    .tool-card {
+        padding: 1.25rem;
+    }
+}

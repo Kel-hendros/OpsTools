@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stadium Grid Manager</title>
+    <meta name="description"
+        content="A professional tool to design and export stadium seat grids for sports and entertainment venues.">
+    <link rel="stylesheet" href="index.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+
+<body>
+    <header class="app-header">
+        <div class="logo">
+            <a href="../../index.html" class="back-home" title="Volver a Ops Tools">← Ops Tools</a>
+            <span class="logo-icon">🏟️</span>
+            <h1>G.R.I.D.O. <span class="tagline">— Grid & Resource Interface for Dynamic Operations</span></h1>
+        </div>
+        <div class="header-actions">
+            <button id="importLayout" class="btn btn-secondary btn-sm">
+                <span class="icon">📁</span> Load Layout JSON
+            </button>
+        </div>
+    </header>
+
+    <div id="app">
+        <!-- New Section Navigator -->
+        <aside id="sectionsNav" class="sections-nav" style="display: none;">
+            <div class="nav-header">
+                <div class="nav-title-row">
+                    <span id="stadiumName" class="stadium-name"></span>
+                    <button id="closeProject" class="icon-btn" title="Close Project">✖</button>
+                </div>
+                <div id="projectStats" class="project-summary">
+                    Secciones: <span id="parentCount">0</span> - Sectores: <span id="leafCount">0</span>
+                </div>
+                <button id="exportAllZip" class="btn btn-primary btn-sm" style="margin-top: 1rem; width: 100%;">
+                    <span class="icon">📦</span> Export All (.ZIP)
+                </button>
+            </div>
+            <div id="sectionsListContainer" class="sections-list">
+                <!-- Sections will be injected here -->
+            </div>
+        </aside>
+
+        <aside class="sidebar">
+            <div class="control-group">
+                <h3>Grid Configuration</h3>
+                <div class="input-field" id="manualSectionField">
+                    <label for="sectionCode">Section Code</label>
+                    <input type="text" id="sectionCode" value="PISO_2/SECCION_503A" placeholder="e.g. PISO_1/SEC_A">
+                </div>
+
+                <div class="grid-controls">
+                    <div class="input-field">
+                        <label for="rows">Rows</label>
+                        <input type="number" id="rows" value="10" min="1" max="100">
+                    </div>
+                    <div class="input-field">
+                        <label for="cols">Cols</label>
+                        <input type="number" id="cols" value="15" min="1" max="100">
+                    </div>
+                </div>
+
+                <div class="grid-controls">
+                    <div class="input-field">
+                        <label for="rowStartValue">Row Start</label>
+                        <input type="text" id="rowStartValue" value="1" placeholder="e.g. 1 or A">
+                    </div>
+                    <div class="input-field">
+                        <label for="colStartValue">Col Start</label>
+                        <input type="number" id="colStartValue" value="1" min="0">
+                    </div>
+                </div>
+
+                <div class="grid-controls no-margin">
+                    <div class="checkbox-field">
+                        <input type="checkbox" id="invertRows">
+                        <label for="invertRows">Invert Rows</label>
+                    </div>
+                    <div class="checkbox-field">
+                        <input type="checkbox" id="invertCols">
+                        <label for="invertCols">Invert Cols</label>
+                    </div>
+                </div>
+
+                <div class="row-naming-config sub-group">
+                    <h4>Row Identification</h4>
+                    <div class="input-field">
+                        <label for="rowNamingType">Naming Type</label>
+                        <select id="rowNamingType">
+                            <option value="numeric">Numbers (1, 2, 3...)</option>
+                            <option value="alpha">Letters (A, B, C...)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Real-time updates enabled -->
+            </div>
+
+            <div class="control-group">
+                <h3>Design Tools</h3>
+                <div class="tool-picker">
+                    <button class="tool-btn active" data-tool="seat" title="Paint Seats">
+                        <span class="icon">🪑</span> Seat
+                    </button>
+                    <button class="tool-btn" data-tool="empty" title="Paint Empty Spaces">
+                        <span class="icon">🚫</span> Empty
+                    </button>
+                    <button class="tool-btn" data-tool="edit" title="Rename Seats">
+                        <span class="icon">✏️</span> Edit
+                    </button>
+                </div>
+
+                <div id="bulkActions" class="sub-group">
+                    <h4>Bulk Actions</h4>
+                    <div class="grid-controls">
+                        <button id="fillAll" class="btn btn-secondary btn-sm" title="Set all to Seats">Fill All</button>
+                        <button id="clearAll" class="btn btn-secondary btn-sm" title="Set all to Empty">Clear
+                            All</button>
+                    </div>
+                </div>
+
+                <div id="bulkNaming" class="sub-group">
+                    <h4>Auto Naming</h4>
+                    <p class="help-text">Use $ROW and $COL</p>
+                    <div class="input-field">
+                        <input type="text" id="namePattern" value="$ROW-$COL" placeholder="e.g. A-$COL">
+                    </div>
+                    <div class="checkbox-field">
+                        <input type="checkbox" id="zeroPadding">
+                        <label for="zeroPadding">Zero Padding (01, 001...)</label>
+                    </div>
+                    <button id="applyNaming" class="btn btn-secondary">Apply to Seats</button>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button id="exportCsv" class="btn btn-success">
+                    <span class="icon">📥</span> Export CSV
+                </button>
+            </div>
+        </aside>
+
+        <main class="viewport">
+            <div class="canvas-header">
+                <div id="canvasTitle" class="canvas-title"></div>
+                <button id="recenterBtn" class="recenter-btn" title="Recenter View">
+                    <span class="icon">🧭</span>
+                </button>
+            </div>
+            <div class="canvas-container">
+                <canvas id="gridCanvas"></canvas>
+            </div>
+            <div class="status-bar">
+                <span id="seatCount">Seats: 0</span>
+                <span id="canvasInfo">10x15 Grid</span>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal for editing individual seat -->
+    <dialog id="editModal" class="modal">
+        <form method="dialog">
+            <h3>Edit Seat</h3>
+            <div class="input-field">
+                <label>Code</label>
+                <input type="text" id="editSeatCode">
+            </div>
+            <div class="modal-actions">
+                <button value="cancel" class="btn btn-secondary">Cancel</button>
+                <button id="saveSeatEdit" value="save" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Modal for editing row label -->
+    <dialog id="rowEditModal" class="modal">
+        <form method="dialog">
+            <h3>Edit Row ID</h3>
+            <div class="input-field">
+                <label>Row Identifier</label>
+                <input type="text" id="editRowLabel">
+            </div>
+            <div class="modal-actions">
+                <button value="cancel" class="btn btn-secondary">Cancel</button>
+                <button id="saveRowEdit" value="save" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Modal for importing layout JSON -->
+    <dialog id="layoutModal" class="modal">
+        <form method="dialog">
+            <h3>Import Layout JSON</h3>
+            <p class="help-text">Paste the stadium layout JSON here to select sections easily.</p>
+            <div class="input-field">
+                <textarea id="layoutJsonPaste" placeholder="Paste JSON here..."
+                    style="min-height: 200px; width: 100%; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: #fff; padding: 0.5rem; border-radius: 0.5rem; font-family: monospace;"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button value="cancel" class="btn btn-secondary">Cancel</button>
+                <button id="confirmImport" value="save" class="btn btn-primary">Process JSON</button>
+            </div>
+        </form>
+    </dialog>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,1708 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fanki Acreditaciones Manager</title>
+
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- SheetJS (XLSX) for Excel Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <!-- Barcode & QR Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f3f4f6;
+        }
+
+        .tab-btn {
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            color: #2563eb;
+            border-bottom: 2px solid #2563eb;
+            background-color: #eff6ff;
+        }
+
+        .tab-btn:hover:not(.active) {
+            color: #374151;
+            background-color: #f9fafb;
+        }
+
+        .subtab-btn {
+            transition: all 0.2s;
+        }
+
+        .subtab-btn.active {
+            color: #111827;
+            border-bottom: 2px solid #111827;
+            font-weight: 700;
+        }
+
+        .subtab-btn:hover:not(.active) {
+            color: #4b5563;
+        }
+
+        /* Hide number input spinners */
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+
+        /* Modal Animation */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .modal-overlay {
+            animation: fadeIn 0.2s ease-out;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
+
+        // --- Utility: UUID Generator ---
+        const generateUUID = () => {
+            if (crypto.randomUUID) return crypto.randomUUID();
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        };
+
+        // --- Utility: Alphanumeric Generator (8 chars, Safe Set) ---
+        const generateAlphanumeric = (length = 8) => {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        };
+
+        // --- Utility: Internal ID Generator (For React Keys) ---
+        const generateInternalId = () => {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        };
+
+        // --- Initial Config Data ---
+        const INITIAL_GROUPS = ["Televisa", "Estadio", "America", "Femenil", "Varonil"];
+        const INITIAL_SUBGROUPS = ["TA", "CANCHA", "CT", "TRIBUNA", "PALCO_TRIBUNA", "PALCO", "ZONA_PRENSA", "CANCHA_PRENSA", "VIP"];
+
+        // --- Components ---
+
+        const CodeViewerModal = ({ isOpen, onClose, code, title }) => {
+            const qrRef = useRef(null);
+            const barcodeRef = useRef(null);
+
+            useEffect(() => {
+                if (isOpen && code) {
+                    // Generate QR
+                    if (qrRef.current) {
+                        new QRious({
+                            element: qrRef.current,
+                            value: code,
+                            size: 180,
+                            level: 'H'
+                        });
+                    }
+                    // Generate Barcode
+                    if (barcodeRef.current) {
+                        try {
+                            JsBarcode(barcodeRef.current, code, {
+                                format: "CODE128",
+                                displayValue: true,
+                                fontSize: 20, // Aumenté un poco la fuente
+                                width: 4,     // Aumenté el grosor de las barras (antes era 2)
+                                height: 100,  // Aumenté la altura para que sea más fácil de escanear (antes 60)
+                                margin: 10
+                            });
+                        } catch (e) {
+                            console.error("Barcode generation error", e);
+                        }
+                    }
+                }
+            }, [isOpen, code]);
+
+            if (!isOpen) return null;
+
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[100] modal-overlay p-4" onClick={onClose}>
+                    <div className="bg-white rounded-lg shadow-2xl max-w-md w-full overflow-hidden transform transition-all relative" onClick={e => e.stopPropagation()}>
+                        <button onClick={onClose} className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100">
+                            <i className="fas fa-times"></i>
+                        </button>
+
+                        <div className="p-6 text-center">
+                            <h3 className="text-lg font-bold text-gray-800 mb-1">Visualizador de Código</h3>
+                            <p className="text-sm text-gray-500 mb-6">{title}</p>
+
+                            <div className="space-y-8">
+                                <div className="flex flex-col items-center">
+                                    <span className="text-xs font-bold text-gray-400 uppercase mb-2">Código QR</span>
+                                    <div className="bg-white p-2 border border-gray-200 rounded shadow-sm inline-block">
+                                        <canvas ref={qrRef}></canvas>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col items-center">
+                                    <span className="text-xs font-bold text-gray-400 uppercase mb-2">Código de Barras</span>
+                                    <div className="bg-white p-2 border border-gray-200 rounded shadow-sm inline-block">
+                                        <svg ref={barcodeRef} className="max-w-full"></svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-gray-50 px-4 py-3 border-t border-gray-100 text-center">
+                            <div className="font-mono text-xl font-bold text-blue-600 tracking-wider select-all cursor-text">{code}</div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const ConfirmationModal = ({ isOpen, message, onConfirm, onCancel }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] modal-overlay p-4">
+                    <div className="bg-white rounded-lg shadow-2xl max-w-sm w-full overflow-hidden transform transition-all">
+                        <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex items-center">
+                            <div className="bg-red-100 p-2 rounded-full mr-3 text-red-600">
+                                <i className="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <h3 className="text-lg font-bold text-gray-800">Confirmación</h3>
+                        </div>
+                        <div className="p-6">
+                            <p className="text-gray-600 text-sm leading-relaxed">{message}</p>
+                        </div>
+                        <div className="bg-gray-50 px-4 py-3 flex justify-end gap-3 border-t border-gray-100">
+                            <button
+                                onClick={onCancel}
+                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={onConfirm}
+                                className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 shadow-sm">
+                                Confirmar Acción
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const GeneratorForm = ({
+            targetLabel,
+            onGenerate,
+            onImport,
+            bulkCount,
+            setBulkCount,
+            groups,
+            selectedGroup,
+            setSelectedGroup,
+            subGroups,
+            selectedSubGroup,
+            setSelectedSubGroup,
+            currentCodeType
+        }) => {
+            const fileInputRef = useRef(null);
+
+            const handleFileChange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    onImport(file);
+                }
+                e.target.value = null;
+            };
+
+            return (
+                <div className="bg-white p-4 rounded-lg shadow border border-gray-200 mb-6">
+                    <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 flex justify-between items-center">
+                        <span>Generador: {targetLabel}</span>
+                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded border border-gray-200 normal-case font-normal">
+                            Formato: <strong>{currentCodeType === 'UUID' ? 'UUID' : 'Alfanumérico (8)'}</strong>
+                        </span>
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                        <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Cantidad (Random)</label>
+                            <input
+                                type="number"
+                                min="1"
+                                value={bulkCount}
+                                onWheel={(e) => e.target.blur()}
+                                onFocus={() => setBulkCount('')}
+                                onChange={e => setBulkCount(e.target.value)}
+                                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
+                                placeholder="1"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Grupo</label>
+                            <select value={selectedGroup} onChange={e => setSelectedGroup(e.target.value)}
+                                className="w-full rounded-md border-gray-300 shadow-sm border p-2 bg-white">
+                                {groups.map(g => <option key={g} value={g}>{g}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Sub-Grupo</label>
+                            <select value={selectedSubGroup} onChange={e => setSelectedSubGroup(e.target.value)}
+                                className="w-full rounded-md border-gray-300 shadow-sm border p-2 bg-white">
+                                {subGroups.map(sg => <option key={sg} value={sg}>{sg}</option>)}
+                            </select>
+                        </div>
+                        <div className="flex gap-2">
+                            <button onClick={onGenerate}
+                                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-2 rounded flex items-center justify-center gap-1 text-sm">
+                                <i className="fas fa-plus-circle"></i> Generar
+                            </button>
+
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleFileChange}
+                                className="hidden"
+                                accept=".csv,.txt"
+                            />
+                            <button onClick={() => fileInputRef.current.click()}
+                                className="bg-gray-700 hover:bg-gray-800 text-white font-bold py-2 px-3 rounded flex items-center justify-center gap-1 text-sm"
+                                title="Importar lista de códigos desde CSV/TXT">
+                                <i className="fas fa-file-upload"></i> Importar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const StatCard = ({ title, data, colorClass, onClick, isActive, isDimmed, isWarning }) => (
+            <div
+                onClick={onClick}
+                className={`
+                    bg-white p-4 rounded-lg shadow border-l-4 ${colorClass} flex flex-col h-full transition-all cursor-pointer select-none
+                    ${isActive ? 'ring-2 ring-offset-2 ring-blue-400 transform scale-105 z-30 relative' : 'hover:scale-105 hover:shadow-md'}
+                    ${isDimmed ? 'opacity-40 grayscale' : 'opacity-100'}
+                    ${isWarning ? 'bg-red-50' : ''}
+                `}
+            >
+                <div className="flex justify-between items-start mb-3">
+                    <div>
+                        <p className={`text-xs font-bold uppercase tracking-wider ${isWarning ? 'text-red-500' : 'text-gray-400'}`}>{title}</p>
+                        <p className={`text-3xl font-bold leading-none mt-1 ${isWarning ? 'text-red-600' : 'text-gray-800'}`}>{data.total}</p>
+                    </div>
+                    <div className={`text-opacity-20 text-2xl ${colorClass.replace('border-', 'text-')}`}>
+                        <i className={`fas ${isWarning ? 'fa-exclamation-triangle' : (isActive ? 'fa-check-circle' : 'fa-users')}`}></i>
+                    </div>
+                </div>
+                <div className="mt-auto border-t border-gray-100 pt-3">
+                    {data.subGroups && Object.keys(data.subGroups).length > 0 ? (
+                        <ul className="text-xs space-y-1.5">
+                            {Object.entries(data.subGroups).map(([sub, count]) => (
+                                <li key={sub} className="flex justify-between items-center text-gray-600">
+                                    <span className="truncate pr-2 font-medium">{sub}</span>
+                                    <span className="font-bold bg-gray-100 px-2 py-0.5 rounded-full text-gray-700">{count}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="text-xs text-gray-400 italic">
+                            {isWarning ? "Click para ver y limpiar" : "Sin sub-grupos"}
+                        </p>
+                    )}
+                </div>
+            </div>
+        );
+
+        const SearchInput = ({ value, onChange }) => (
+            <div className="relative flex-1">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i className="fas fa-search text-gray-400"></i>
+                </div>
+                <input
+                    type="text"
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    placeholder="Buscar UUID (mín. 4 caracteres)..."
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                />
+            </div>
+        );
+
+        const SortableHeader = ({ label, sortKey, currentSort, onSort }) => {
+            let icon = "fa-sort text-gray-300";
+            if (currentSort.key === sortKey) {
+                icon = currentSort.direction === 'asc' ? "fa-sort-up text-blue-500" : "fa-sort-down text-blue-500";
+            }
+
+            return (
+                <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none group"
+                    onClick={() => onSort(sortKey)}
+                    title={`Ordenar por ${label}`}
+                >
+                    <div className="flex items-center gap-2">
+                        {label}
+                        <i className={`fas ${icon}`}></i>
+                    </div>
+                </th>
+            );
+        };
+
+        function App() {
+            // --- STATE ---
+
+            // UI State
+            const [activeTab, setActiveTab] = useState('workspace'); // 'workspace' | 'config'
+            const [configSubTab, setConfigSubTab] = useState('groups'); // 'groups' | 'master'
+            const [workspaceSubTab, setWorkspaceSubTab] = useState('onetime'); // 'onetime' | 'permanent'
+            const [notification, setNotification] = useState(null);
+            const [modalConfig, setModalConfig] = useState({ isOpen: false, message: '', onConfirm: null });
+            const [viewerModal, setViewerModal] = useState({ isOpen: false, code: null, title: '' });
+
+            // Config & Team
+            const [teamName, setTeamName] = useState('EQUIPO');
+            const [codeType, setCodeType] = useState('ALPHANUMERIC'); // 'UUID' | 'ALPHANUMERIC'
+
+            // Filters & Sort
+            const [filterGroup, setFilterGroup] = useState(null);
+            const [searchQuery, setSearchQuery] = useState("");
+            const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+
+            // Master Data (Persists)
+            const [groups, setGroups] = useState(INITIAL_GROUPS);
+            const [subGroups, setSubGroups] = useState(INITIAL_SUBGROUPS);
+            const [masterPermanents, setMasterPermanents] = useState([]);
+
+            // Workspace Data (Ephemeral per event)
+            const [eventCode, setEventCode] = useState('EVENT_CODE');
+            const [oneTimeAccreditations, setOneTimeAccreditations] = useState([]);
+            const [excludedPermanentIds, setExcludedPermanentIds] = useState([]); // Array of UUIDs
+
+            // Forms State
+            const [bulkCount, setBulkCount] = useState(1);
+            const [selectedGroup, setSelectedGroup] = useState(INITIAL_GROUPS[0]);
+            const [selectedSubGroup, setSelectedSubGroup] = useState(INITIAL_SUBGROUPS[0]);
+
+            // Config Form State
+            const [newGroupInput, setNewGroupInput] = useState("");
+            const [newSubGroupInput, setNewSubGroupInput] = useState("");
+
+            // --- EFFECTS ---
+
+            // Reset filters/sort when changing tabs
+            useEffect(() => {
+                setSearchQuery("");
+                setFilterGroup(null);
+                setSortConfig({ key: null, direction: 'asc' });
+            }, [activeTab, configSubTab]);
+
+            // Sync selectedGroup when groups list changes
+            useEffect(() => {
+                if (groups.length === 0) return;
+                if (!groups.includes(selectedGroup)) {
+                    setSelectedGroup(groups[0]);
+                }
+            }, [groups]);
+
+            // Sync selectedSubGroup when subGroups list changes
+            useEffect(() => {
+                if (subGroups.length === 0) return;
+                if (!subGroups.includes(selectedSubGroup)) {
+                    setSelectedSubGroup(subGroups[0]);
+                }
+            }, [subGroups]);
+
+            // --- COMPUTED ---
+
+            // 1. WORKSPACE COMPUTATIONS
+            const workspaceList = useMemo(() => {
+                const codeCounts = {};
+                const countCode = (uuid) => { codeCounts[uuid] = (codeCounts[uuid] || 0) + 1; };
+
+                masterPermanents.forEach(p => { if (!excludedPermanentIds.includes(p.uuid)) countCode(p.uuid); });
+                oneTimeAccreditations.forEach(o => { countCode(o.uuid); });
+
+                const processedPermanents = masterPermanents.map(p => ({
+                    ...p,
+                    type: 'PERMANENT',
+                    isExcluded: excludedPermanentIds.includes(p.uuid),
+                    isDuplicate: (!excludedPermanentIds.includes(p.uuid) && codeCounts[p.uuid] > 1)
+                }));
+
+                const processedOneTimes = oneTimeAccreditations.map(o => ({
+                    ...o,
+                    type: 'ONE_TIME',
+                    isExcluded: false,
+                    isDuplicate: codeCounts[o.uuid] > 1
+                }));
+
+                return [...processedPermanents, ...processedOneTimes];
+            }, [masterPermanents, excludedPermanentIds, oneTimeAccreditations]);
+
+            const activeCount = workspaceList.filter(x => !x.isExcluded).length;
+
+            const { statsByGroup, duplicateCount } = useMemo(() => {
+                const stats = {};
+                let dups = 0;
+
+                workspaceList.forEach(item => {
+                    if (!item.isExcluded) {
+                        if (item.isDuplicate) dups++;
+
+                        if (!stats[item.group]) {
+                            stats[item.group] = { total: 0, subGroups: {} };
+                        }
+                        stats[item.group].total += 1;
+                        stats[item.group].subGroups[item.subGroup] = (stats[item.group].subGroups[item.subGroup] || 0) + 1;
+                    }
+                });
+                return { statsByGroup: stats, duplicateCount: dups };
+            }, [workspaceList]);
+
+            const filteredTableList = useMemo(() => {
+                let list = [...workspaceList]; // Shallow copy
+
+                // 1. Dashboard Filter (Group OR Duplicates)
+                if (filterGroup === 'DUPLICATES') {
+                    list = list.filter(x => x.isDuplicate && !x.isExcluded);
+                } else if (filterGroup) {
+                    list = list.filter(x => x.group === filterGroup);
+                }
+
+                // 2. Tab Filter (Type)
+                if (workspaceSubTab === 'onetime') {
+                    list = list.filter(x => x.type === 'ONE_TIME');
+                } else {
+                    list = list.filter(x => x.type === 'PERMANENT');
+                }
+
+                // 3. Search Filter (UUID)
+                if (searchQuery.length >= 4) {
+                    const lowerQ = searchQuery.toLowerCase();
+                    list = list.filter(x => x.uuid.toLowerCase().includes(lowerQ));
+                }
+
+                // 4. Sort (Using localeCompare for robust sorting)
+                if (sortConfig.key) {
+                    list.sort((a, b) => {
+                        let aVal = '', bVal = '';
+                        if (sortConfig.key === 'group') {
+                            aVal = `${a.group} ${a.subGroup}`;
+                            bVal = `${b.group} ${b.subGroup}`;
+                        } else {
+                            aVal = a[sortConfig.key] || '';
+                            bVal = b[sortConfig.key] || '';
+                        }
+
+                        return sortConfig.direction === 'asc'
+                            ? aVal.localeCompare(bVal)
+                            : bVal.localeCompare(aVal);
+                    });
+                }
+
+                return list;
+            }, [workspaceList, workspaceSubTab, filterGroup, searchQuery, sortConfig]);
+
+            // 2. MASTER COMPUTATIONS
+            const { masterStatsByGroup, masterDuplicateCount } = useMemo(() => {
+                const stats = {};
+                const codeCounts = {};
+                let dups = 0;
+
+                // Pass 1: Count occurrences to find duplicates
+                masterPermanents.forEach(p => { codeCounts[p.uuid] = (codeCounts[p.uuid] || 0) + 1; });
+
+                // Pass 2: Build stats
+                masterPermanents.forEach(item => {
+                    if (!stats[item.group]) {
+                        stats[item.group] = { total: 0, subGroups: {} };
+                    }
+                    stats[item.group].total += 1;
+                    stats[item.group].subGroups[item.subGroup] = (stats[item.group].subGroups[item.subGroup] || 0) + 1;
+                });
+
+                // Calculate duplicate items count
+                dups = masterPermanents.filter(p => codeCounts[p.uuid] > 1).length;
+
+                return { masterStatsByGroup: stats, masterDuplicateCount: dups };
+            }, [masterPermanents]);
+
+            const filteredMasterList = useMemo(() => {
+                let list = [...masterPermanents];
+
+                // 1. Filter Logic (Cards)
+                if (filterGroup === 'DUPLICATES') {
+                    const codeCounts = {};
+                    masterPermanents.forEach(p => { codeCounts[p.uuid] = (codeCounts[p.uuid] || 0) + 1; });
+                    list = list.filter(p => codeCounts[p.uuid] > 1);
+                } else if (filterGroup) {
+                    list = list.filter(x => x.group === filterGroup);
+                }
+
+                // 2. Search
+                if (searchQuery.length >= 4) {
+                    const lowerQ = searchQuery.toLowerCase();
+                    list = list.filter(x => x.uuid.toLowerCase().includes(lowerQ));
+                }
+
+                // 3. Sort
+                if (sortConfig.key) {
+                    list.sort((a, b) => {
+                        let aVal = '', bVal = '';
+                        if (sortConfig.key === 'group') {
+                            aVal = `${a.group} ${a.subGroup}`;
+                            bVal = `${b.group} ${b.subGroup}`;
+                        } else {
+                            aVal = a[sortConfig.key] || '';
+                            bVal = b[sortConfig.key] || '';
+                        }
+                        return sortConfig.direction === 'asc'
+                            ? aVal.localeCompare(bVal)
+                            : bVal.localeCompare(aVal);
+                    });
+                }
+
+                return list;
+            }, [masterPermanents, searchQuery, sortConfig, filterGroup]);
+
+
+            // --- ACTIONS ---
+
+            const handleTeamNameChange = (e) => {
+                const val = e.target.value;
+                // Allow only Alphanumeric (no spaces, no special chars)
+                const sanitized = val.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+                setTeamName(sanitized);
+            };
+
+            const showNotify = (msg, type = 'success') => {
+                setNotification({ msg, type });
+                setTimeout(() => setNotification(null), 4000);
+            };
+
+            // Modal Helper
+            const requestConfirmation = (message, action) => {
+                setModalConfig({
+                    isOpen: true,
+                    message,
+                    onConfirm: () => {
+                        action();
+                        setModalConfig({ isOpen: false, message: '', onConfirm: null });
+                    }
+                });
+            };
+
+            // Viewer Helper
+            const openViewer = (code, title) => {
+                setViewerModal({ isOpen: true, code, title });
+            };
+
+            const toggleFilter = (groupName) => {
+                if (filterGroup === groupName) {
+                    setFilterGroup(null);
+                } else {
+                    setFilterGroup(groupName);
+                }
+            };
+
+            const handleSort = (key) => {
+                let direction = 'asc';
+                if (sortConfig.key === key) {
+                    if (sortConfig.direction === 'asc') direction = 'desc';
+                    else {
+                        setSortConfig({ key: null, direction: 'asc' }); // Reset
+                        return;
+                    }
+                }
+                setSortConfig({ key, direction });
+            };
+
+            const handleImport = (file, target) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const text = e.target.result;
+                    const codes = text.split(/\r?\n/).map(line => line.trim()).filter(line => line.length > 0);
+
+                    if (codes.length === 0) {
+                        showNotify("El archivo está vacío o no tiene códigos válidos.", "error");
+                        return;
+                    }
+
+                    const newItems = codes.map(code => ({
+                        internalId: generateInternalId(), // CRUCIAL: Unique key for React
+                        uuid: code,
+                        group: selectedGroup,
+                        subGroup: selectedSubGroup,
+                        createdAt: new Date().toISOString()
+                    }));
+
+                    if (target === 'MASTER') {
+                        setMasterPermanents(prev => [...prev, ...newItems]);
+                        showNotify(`Importados ${newItems.length} códigos al Master.`, "success");
+                    } else {
+                        setOneTimeAccreditations(prev => [...prev, ...newItems]);
+                        showNotify(`Importados ${newItems.length} códigos de única vez.`, "success");
+                        setWorkspaceSubTab('onetime');
+                    }
+                };
+                reader.readAsText(file);
+            };
+
+            const generateAccreditations = (target) => {
+                const count = parseInt(bulkCount);
+                if (!count || count < 1) {
+                    showNotify("Por favor ingresa una cantidad válida (mínimo 1)", "error");
+                    return;
+                }
+
+                const newItems = [];
+                for (let i = 0; i < count; i++) {
+                    const newCode = codeType === 'ALPHANUMERIC' ? generateAlphanumeric() : generateUUID();
+                    newItems.push({
+                        internalId: generateInternalId(), // CRUCIAL: Unique key for React
+                        uuid: newCode,
+                        group: selectedGroup,
+                        subGroup: selectedSubGroup,
+                        createdAt: new Date().toISOString()
+                    });
+                }
+
+                if (target === 'MASTER') {
+                    setMasterPermanents(prev => [...prev, ...newItems]);
+                    showNotify(`Se agregaron ${count} permanentes (${codeType}) al Master.`);
+                } else {
+                    setOneTimeAccreditations(prev => [...prev, ...newItems]);
+                    showNotify(`Se agregaron ${count} de única vez (${codeType}) al Workspace.`);
+                    setWorkspaceSubTab('onetime');
+                    if (filterGroup && filterGroup !== selectedGroup) setFilterGroup(null);
+                }
+                setBulkCount(1);
+            };
+
+            // REGENERATE CODE ACTION
+            const regenerateCode = (item) => {
+                const newCode = codeType === 'ALPHANUMERIC' ? generateAlphanumeric() : generateUUID();
+
+                if (item.type === 'ONE_TIME') {
+                    setOneTimeAccreditations(prev => prev.map(p =>
+                        p.internalId === item.internalId ? { ...p, uuid: newCode } : p
+                    ));
+                    showNotify("Código de Única Vez regenerado.");
+                } else {
+                    // Update Master Permanent
+                    setMasterPermanents(prev => prev.map(p =>
+                        p.internalId === item.internalId ? { ...p, uuid: newCode } : p
+                    ));
+                    // Also update exclusion list if it was excluded by old ID (though we track exclusion by UUID, so better check)
+                    if (excludedPermanentIds.includes(item.uuid)) {
+                        setExcludedPermanentIds(prev => [...prev.filter(id => id !== item.uuid), newCode]);
+                    }
+                    showNotify("Código Permanente regenerado.");
+                }
+            };
+
+            const toggleExclusion = (uuid) => {
+                setExcludedPermanentIds(prev => {
+                    if (prev.includes(uuid)) return prev.filter(id => id !== uuid);
+                    return [...prev, uuid];
+                });
+            };
+
+            // MODIFIED: Delete by internalId (unique) instead of UUID
+            const deleteOneTime = (internalId) => {
+                setOneTimeAccreditations(prev => prev.filter(item => item.internalId !== internalId));
+            };
+
+            // MODIFIED: Use Custom Modal instead of window.confirm
+            const deletePermanentFromMaster = (item) => {
+                requestConfirmation(
+                    "¿Estás seguro de borrar esta acreditación del MASTER? Esto afectará futuros eventos y no se puede deshacer.",
+                    () => {
+                        if (item.internalId) {
+                            setMasterPermanents(prev => prev.filter(p => p.internalId !== item.internalId));
+                        } else {
+                            setMasterPermanents(prev => prev.filter(p => p.uuid !== item.uuid));
+                        }
+                        setExcludedPermanentIds(prev => prev.filter(id => id !== item.uuid));
+                        showNotify("Acreditación eliminada del Master.");
+                    }
+                );
+            };
+
+            // NEW: Regenerate All One Time Codes
+            const regenerateAllOneTime = () => {
+                const count = oneTimeAccreditations.length;
+                if (count === 0) {
+                    showNotify("No hay acreditaciones de Única Vez para regenerar.", "warning");
+                    return;
+                }
+
+                requestConfirmation(
+                    `¿Estás seguro? Se regenerarán ${count} códigos de 'Única Vez'.\n\nEsta acción cambiará todos los identificadores actuales por nuevos códigos ${codeType === 'ALPHANUMERIC' ? 'Alfanuméricos' : 'UUID'}.`,
+                    () => {
+                        setOneTimeAccreditations(prev => prev.map(item => ({
+                            ...item,
+                            uuid: codeType === 'ALPHANUMERIC' ? generateAlphanumeric() : generateUUID()
+                        })));
+                        showNotify(`Se han regenerado ${count} códigos exitosamente.`);
+                    }
+                );
+            };
+
+            // MODIFIED: Use Custom Modal instead of window.confirm
+            const resetWorkspace = () => {
+                requestConfirmation(
+                    "¿Estás seguro de comenzar un NUEVO EVENTO?\n\nSe eliminarán todas las acreditaciones de 'Única Vez' y se restablecerán las exclusiones de los Permanentes. Los datos del Master NO se borrarán.",
+                    () => {
+                        setOneTimeAccreditations([]);
+                        setExcludedPermanentIds([]);
+                        setEventCode('EVENT_CODE');
+                        setFilterGroup(null);
+                        setSearchQuery("");
+                        showNotify("Espacio de trabajo reiniciado exitosamente.", "success");
+                    }
+                );
+            };
+
+            const addGroup = () => {
+                if (newGroupInput && !groups.includes(newGroupInput)) {
+                    setGroups([...groups, newGroupInput]);
+                    setNewGroupInput("");
+                }
+            };
+            const removeGroup = (g) => setGroups(groups.filter(x => x !== g));
+
+            const addSubGroup = () => {
+                if (newSubGroupInput && !subGroups.includes(newSubGroupInput)) {
+                    setSubGroups([...subGroups, newSubGroupInput]);
+                    setNewSubGroupInput("");
+                }
+            };
+            const removeSubGroup = (sg) => setSubGroups(subGroups.filter(x => x !== sg));
+
+            // --- IMPORT / EXPORT CONFIG ---
+
+            const downloadJSON = () => {
+                if (!teamName || teamName === "EQUIPO") {
+                    showNotify("Por favor asigna un nombre al Equipo antes de guardar.", "error");
+                    return;
+                }
+
+                const today = new Date();
+                const dd = String(today.getDate()).padStart(2, '0');
+                const mm = String(today.getMonth() + 1).padStart(2, '0'); // January is 0!
+                const yyyy = today.getFullYear();
+                const dateStr = `${mm}-${dd}-${yyyy}`;
+
+                const data = {
+                    teamName,
+                    codeType, // Save Preference
+                    config: { groups, subGroups },
+                    masterPermanents,
+                    meta: { exportedAt: new Date().toISOString(), version: "1.2" }
+                };
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `${teamName}-${dateStr}.json`;
+                a.click();
+                showNotify("Configuración Master guardada.");
+            };
+
+            const loadJSON = (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const json = JSON.parse(e.target.result);
+                        if (json.teamName) {
+                            setTeamName(json.teamName);
+                        }
+                        if (json.codeType) {
+                            setCodeType(json.codeType);
+                        }
+                        if (json.config) {
+                            setGroups(json.config.groups || []);
+                            setSubGroups(json.config.subGroups || []);
+                        }
+                        if (json.masterPermanents) {
+                            // Ensure imported items have internalId
+                            const loadedPermanents = json.masterPermanents.map(p => ({
+                                ...p,
+                                internalId: p.internalId || generateInternalId()
+                            }));
+                            setMasterPermanents(loadedPermanents);
+                        }
+                        showNotify("Configuración cargada exitosamente.");
+                    } catch (err) {
+                        alert("Error al leer el archivo JSON.");
+                    }
+                };
+                reader.readAsText(file);
+            };
+
+            // --- EXPORT CSV (System Import) ---
+            const downloadCSV = (mode = 'ALL') => {
+                if (duplicateCount > 0) {
+                    showNotify("No se puede exportar mientras existan códigos DUPLICADOS activos. Revisa la alerta roja.", "error");
+                    return;
+                }
+
+                let itemsToExport = workspaceList.filter(x => !x.isExcluded);
+
+                // Filter if requesting only One Time items
+                if (mode === 'ONETIME') {
+                    itemsToExport = itemsToExport.filter(x => x.type === 'ONE_TIME');
+                    if (itemsToExport.length === 0) {
+                        showNotify("No hay acreditaciones de 'Única Vez' para exportar.", "warning");
+                        return;
+                    }
+                }
+
+                const headers = ["fanId", "barCode", "entranceLane", "eventCode", "purchaseReference", "sectionCode", "seatCode"];
+                const rows = itemsToExport.map((item, index) => {
+                    return [
+                        "-999999",
+                        item.uuid,
+                        "1",
+                        eventCode,
+                        "BARCODE_FROM_CSV",
+                        `${item.group}/${item.subGroup}`,
+                        (index + 1).toString() // Incremental SeatCode starting at 1
+                    ].join(",");
+                });
+
+                const csvContent = [headers.join(","), ...rows].join("\n");
+                const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+
+                const suffix = mode === 'ONETIME' ? '_unica_vez' : '_todo';
+                a.download = `acreditaciones_${eventCode}${suffix}.csv`;
+                a.click();
+                showNotify(`CSV (${mode === 'ONETIME' ? 'Única Vez' : 'Completo'}) generado.`);
+            };
+
+            // --- EXPORT REPORT (XLSX for Management) ---
+            const downloadXLSReport = () => {
+                if (duplicateCount > 0) {
+                    showNotify("No se puede generar reporte con duplicados activos.", "error");
+                    return;
+                }
+                if (!window.XLSX) {
+                    showNotify("Error: Librería XLSX no cargada.", "error");
+                    return;
+                }
+
+                // 1. Prepare Workbook
+                const wb = XLSX.utils.book_new();
+
+                // 2. Prepare Detailed Stats & Calculate Grand Totals
+                const reportStats = {};
+                let grandTotalPerm = 0;
+                let grandTotalOneTime = 0;
+
+                // Aggregate data specifically for the report
+                workspaceList.forEach(item => {
+                    if (item.isExcluded) return;
+
+                    // Global Totals Calculation
+                    const isPerm = item.type === 'PERMANENT';
+                    if (isPerm) grandTotalPerm++; else grandTotalOneTime++;
+
+                    // Group Stats Initialization
+                    if (!reportStats[item.group]) {
+                        reportStats[item.group] = {
+                            permanent: 0,
+                            oneTime: 0,
+                            total: 0,
+                            subGroups: {}
+                        };
+                    }
+
+                    const gStat = reportStats[item.group];
+
+                    if (!gStat.subGroups[item.subGroup]) {
+                        gStat.subGroups[item.subGroup] = {
+                            permanent: 0,
+                            oneTime: 0,
+                            total: 0
+                        };
+                    }
+                    const sStat = gStat.subGroups[item.subGroup];
+
+                    // Update Counts
+                    gStat.total++;
+                    if (isPerm) gStat.permanent++; else gStat.oneTime++;
+
+                    sStat.total++;
+                    if (isPerm) sStat.permanent++; else sStat.oneTime++;
+                });
+
+                const grandTotalAll = grandTotalPerm + grandTotalOneTime;
+
+                // 3. Prepare Sheet 1: Summary
+                const summaryData = [
+                    ["REPORTE DE ACREDITACIONES"],
+                    [""],
+                    ["Equipo", teamName],
+                    ["Evento", eventCode],
+                    ["Fecha Generación", new Date().toLocaleString()],
+                    [""],
+                    ["DESGLOSE POR GRUPOS", "PERMANENTES", "ÚNICA VEZ", "TOTAL"],
+                ];
+
+                // Build Summary Rows
+                Object.entries(reportStats).forEach(([group, data]) => {
+                    // Group Header Row
+                    summaryData.push([group.toUpperCase(), data.permanent, data.oneTime, data.total]);
+
+                    // SubGroup Rows (Indented)
+                    Object.entries(data.subGroups).forEach(([sub, subData]) => {
+                        summaryData.push([`   ${sub}`, subData.permanent, subData.oneTime, subData.total]);
+                    });
+                    summaryData.push([""]); // Spacer
+                });
+
+                // --- GRAND TOTAL ROW ---
+                // Add a divider line (visual spacing)
+                summaryData.push(["TOTAL GENERAL", grandTotalPerm, grandTotalOneTime, grandTotalAll]);
+
+                const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+                // Set column widths
+                wsSummary['!cols'] = [{ wch: 30 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
+                XLSX.utils.book_append_sheet(wb, wsSummary, "Resumen");
+
+                // 4. Prepare Sheet 2: Detailed List
+                const detailHeader = ["Equipo", "Evento", "Tipo", "UUID", "Grupo", "Subgrupo"];
+                const detailData = workspaceList
+                    .filter(x => !x.isExcluded)
+                    .map(item => [
+                        teamName,
+                        eventCode,
+                        item.type === 'PERMANENT' ? 'Permanente' : 'Única Vez',
+                        item.uuid,
+                        item.group,
+                        item.subGroup
+                    ]);
+
+                const wsDetails = XLSX.utils.aoa_to_sheet([detailHeader, ...detailData]);
+                wsDetails['!cols'] = [{ wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 40 }, { wch: 20 }, { wch: 20 }];
+                XLSX.utils.book_append_sheet(wb, wsDetails, "Listado Completo");
+
+                // 5. Download
+                XLSX.writeFile(wb, `Reporte_${teamName}_${eventCode}.xlsx`);
+                showNotify("Reporte Excel generado correctamente.");
+            };
+
+            const getSubTabClass = (active) => `px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 flex items-center gap-2 ${active ? 'text-blue-600 border-blue-600 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50'}`;
+            const getConfigSubTabClass = (active) => `subtab-btn py-2 px-4 text-sm font-medium border-b-2 ${active ? 'active border-gray-800 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700'}`;
+
+
+            return (
+                <div className="min-h-screen flex flex-col relative">
+                    {/* GLOBAL MODALS */}
+                    <ConfirmationModal
+                        isOpen={modalConfig.isOpen}
+                        message={modalConfig.message}
+                        onConfirm={modalConfig.onConfirm}
+                        onCancel={() => setModalConfig({ ...modalConfig, isOpen: false })}
+                    />
+
+                    <CodeViewerModal
+                        isOpen={viewerModal.isOpen}
+                        onClose={() => setViewerModal({ ...viewerModal, isOpen: false })}
+                        code={viewerModal.code}
+                        title={viewerModal.title}
+                    />
+
+                    {/* TOP BAR */}
+                    <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
+                        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <a href="../../index.html" className="text-gray-400 hover:text-gray-600 text-xs border border-gray-300 rounded px-2 py-1 transition-colors no-underline" title="Volver a Ops Tools">← Ops Tools</a>
+                                <div className="bg-blue-600 text-white font-bold rounded p-1 w-8 h-8 flex items-center justify-center">F</div>
+                                <h1 className="font-bold text-gray-800 text-lg hidden sm:block">Acreditaciones Manager</h1>
+                            </div>
+
+                            {/* NEW TABS NAV */}
+                            <nav className="flex space-x-6">
+                                <button onClick={() => setActiveTab('workspace')} className={`tab-btn py-5 px-3 font-medium text-sm flex items-center gap-2 ${activeTab === 'workspace' ? 'active' : 'text-gray-500'}`}>
+                                    <i className="fas fa-briefcase"></i> Workspace
+                                </button>
+                                <button onClick={() => setActiveTab('config')} className={`tab-btn py-5 px-3 font-medium text-sm flex items-center gap-2 ${activeTab === 'config' ? 'active' : 'text-gray-500'}`}>
+                                    <i className="fas fa-cogs"></i> Configuración
+                                </button>
+                            </nav>
+                        </div>
+                    </header>
+
+                    {/* MAIN CONTENT */}
+                    <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-6">
+
+                        {notification && (
+                            <div className={`fixed bottom-4 right-4 px-6 py-3 rounded shadow-lg z-50 animate-bounce text-white ${notification.type === 'error' ? 'bg-red-600' : 'bg-green-600'}`}>
+                                <i className={`fas ${notification.type === 'error' ? 'fa-exclamation-circle' : 'fa-check-circle'} mr-2`}></i> {notification.msg}
+                            </div>
+                        )}
+
+                        {/* === WORKSPACE TAB === */}
+                        {activeTab === 'workspace' && (
+                            <div>
+                                {/* Dashboard & Export Header */}
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                                    <div className="col-span-1 md:col-span-3 bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex-1 mr-4">
+                                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Código del Evento (EventCode)</label>
+                                                <input type="text" value={eventCode} onChange={e => setEventCode(e.target.value)}
+                                                    className="w-full rounded border-gray-300 border p-2 font-mono text-lg text-blue-800 bg-blue-50" />
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="text-xs font-bold text-gray-400 uppercase mb-1">Equipo Activo</div>
+                                                <div className="bg-gray-100 text-gray-700 px-3 py-2 rounded font-mono font-bold">{teamName}</div>
+                                            </div>
+                                        </div>
+                                        <div className="mt-3 flex justify-end gap-4">
+                                            <button
+                                                onClick={regenerateAllOneTime}
+                                                className="text-xs flex items-center gap-2 text-gray-500 hover:text-blue-600 transition-colors"
+                                                title="Regenerar todos los códigos temporales manteniendo grupos y cantidades">
+                                                <i className="fas fa-sync"></i> Regenerar Códigos (Única Vez)
+                                            </button>
+                                            <div className="w-px bg-gray-300 h-4 self-center"></div>
+                                            <button
+                                                onClick={resetWorkspace}
+                                                className="text-xs flex items-center gap-2 text-gray-500 hover:text-red-600 transition-colors"
+                                                title="Borra las acreditaciones temporales y limpia el tablero">
+                                                <i className="fas fa-redo-alt"></i> Limpiar y comenzar Nuevo Evento
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* STATUS & EXPORT BUTTONS */}
+                                    <div className={`p-4 rounded-lg shadow text-white flex flex-col justify-between items-center text-center transition-colors ${duplicateCount > 0 ? 'bg-red-600' : 'bg-blue-600'}`}>
+                                        <div>
+                                            <div className="text-3xl font-bold">{activeCount}</div>
+                                            <div className="text-xs opacity-80 mb-2">Total Activos</div>
+                                        </div>
+                                        <div className="w-full space-y-2">
+                                            {/* CSV BUTTONS GROUP */}
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <button
+                                                    onClick={() => downloadCSV('ALL')}
+                                                    disabled={duplicateCount > 0}
+                                                    className={`w-full font-bold py-1.5 px-1 rounded shadow-sm text-xs flex items-center justify-center gap-1 ${duplicateCount > 0 ? 'bg-red-800 text-gray-300 cursor-not-allowed' : 'bg-white text-blue-600 hover:bg-blue-50'}`}
+                                                    title="Exportar TODO (Sistema)">
+                                                    {duplicateCount > 0 ? <i className="fas fa-lock"></i> : <><i className="fas fa-database"></i> Todo CSV</>}
+                                                </button>
+                                                <button
+                                                    onClick={() => downloadCSV('ONETIME')}
+                                                    disabled={duplicateCount > 0}
+                                                    className={`w-full font-bold py-1.5 px-1 rounded shadow-sm text-xs flex items-center justify-center gap-1 ${duplicateCount > 0 ? 'bg-red-800 text-gray-300 cursor-not-allowed' : 'bg-blue-800 text-white hover:bg-blue-900 border border-white/20'}`}
+                                                    title="Exportar SOLO ÚNICA VEZ (Imprenta)">
+                                                    {duplicateCount > 0 ? <i className="fas fa-lock"></i> : <><i className="fas fa-print"></i> Solo Unica</>}
+                                                </button>
+                                            </div>
+
+                                            <button
+                                                onClick={downloadXLSReport}
+                                                disabled={duplicateCount > 0}
+                                                className={`w-full font-bold py-1.5 px-4 rounded shadow-sm text-xs flex items-center justify-center gap-2 ${duplicateCount > 0 ? 'bg-red-800 text-gray-300 cursor-not-allowed' : 'bg-green-500 text-white hover:bg-green-600'}`}>
+                                                {duplicateCount > 0 ? <><i className="fas fa-lock"></i> XLS BLOQUEADO</> : <><i className="fas fa-file-excel"></i> Descargar Reporte</>}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Stats Cards - Summary by Group & DUPLICATES ALERT */}
+                                {(Object.keys(statsByGroup).length > 0 || duplicateCount > 0) && (
+                                    <div className="mb-6">
+                                        <h4 className="text-xs font-bold text-gray-400 uppercase mb-2">Resumen por Grupo</h4>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 items-stretch">
+
+                                            {/* DUPLICATE WARNING CARD */}
+                                            {duplicateCount > 0 && (
+                                                <StatCard
+                                                    title="DUPLICADOS"
+                                                    data={{ total: duplicateCount }}
+                                                    colorClass="border-red-500"
+                                                    onClick={() => toggleFilter('DUPLICATES')}
+                                                    isActive={filterGroup === 'DUPLICATES'}
+                                                    isDimmed={filterGroup && filterGroup !== 'DUPLICATES'}
+                                                    isWarning={true}
+                                                />
+                                            )}
+
+                                            {Object.entries(statsByGroup).map(([group, data], idx) => {
+                                                const colors = ["border-blue-500", "border-green-500", "border-purple-500", "border-orange-500", "border-pink-500", "border-indigo-500", "border-teal-500"];
+                                                const isActive = filterGroup === group;
+                                                const isDimmed = filterGroup && !isActive;
+                                                return <StatCard key={group} title={group} data={data} colorClass={colors[idx % colors.length]} onClick={() => toggleFilter(group)} isActive={isActive} isDimmed={isDimmed} />;
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <GeneratorForm
+                                    targetLabel="Única Vez (Solo este evento)"
+                                    onGenerate={() => generateAccreditations('ONETIME')}
+                                    onImport={(file) => handleImport(file, 'ONETIME')}
+                                    bulkCount={bulkCount}
+                                    setBulkCount={setBulkCount}
+                                    groups={groups}
+                                    selectedGroup={selectedGroup}
+                                    setSelectedGroup={setSelectedGroup}
+                                    subGroups={subGroups}
+                                    selectedSubGroup={selectedSubGroup}
+                                    setSelectedSubGroup={setSelectedSubGroup}
+                                    currentCodeType={codeType}
+                                />
+
+                                {/* Sub-Tabs & Search */}
+                                <div className="mt-8">
+                                    <div className="flex flex-col sm:flex-row justify-between items-end border-b border-gray-200 pb-2 sm:pb-0 gap-4">
+                                        <nav className="-mb-px flex space-x-4 px-4" aria-label="Tabs">
+                                            <button
+                                                onClick={() => setWorkspaceSubTab('onetime')}
+                                                className={getSubTabClass(workspaceSubTab === 'onetime')}>
+                                                <i className="fas fa-ticket-alt"></i>
+                                                Única Vez
+                                                <span className="bg-gray-100 text-gray-600 py-0.5 px-2 rounded-full text-xs ml-auto">
+                                                    {workspaceList.filter(x => x.type === 'ONE_TIME').length}
+                                                </span>
+                                            </button>
+                                            <button
+                                                onClick={() => setWorkspaceSubTab('permanent')}
+                                                className={getSubTabClass(workspaceSubTab === 'permanent')}>
+                                                <i className="fas fa-id-badge"></i>
+                                                Permanentes
+                                                <span className="bg-gray-100 text-gray-600 py-0.5 px-2 rounded-full text-xs ml-auto">
+                                                    {workspaceList.filter(x => x.type === 'PERMANENT').length}
+                                                </span>
+                                            </button>
+                                        </nav>
+
+                                        <div className="w-full sm:w-80 px-4 sm:px-0 mb-2">
+                                            <SearchInput value={searchQuery} onChange={setSearchQuery} />
+                                        </div>
+                                    </div>
+
+                                    {/* Active Filter Indicators */}
+                                    {(filterGroup || searchQuery.length >= 4) && (
+                                        <div className="bg-gray-50 px-4 py-2 border-b border-gray-100 flex gap-2 items-center flex-wrap">
+                                            <span className="text-xs font-bold text-gray-400 uppercase mr-2">Filtros Activos:</span>
+
+                                            {filterGroup === 'DUPLICATES' && (
+                                                <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs flex items-center border border-red-200 font-bold animate-pulse">
+                                                    <i className="fas fa-exclamation-triangle mr-1"></i> MOSTRANDO DUPLICADOS
+                                                    <button onClick={() => setFilterGroup(null)} className="ml-2 hover:text-red-900"><i className="fas fa-times"></i></button>
+                                                </span>
+                                            )}
+
+                                            {filterGroup && filterGroup !== 'DUPLICATES' && (
+                                                <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs flex items-center border border-blue-200">
+                                                    Grupo: <strong>{filterGroup}</strong>
+                                                    <button onClick={() => setFilterGroup(null)} className="ml-2 hover:text-blue-900"><i className="fas fa-times"></i></button>
+                                                </span>
+                                            )}
+
+                                            {searchQuery.length >= 4 && (
+                                                <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-xs flex items-center border border-yellow-200">
+                                                    Búsqueda: <strong>"{searchQuery}"</strong>
+                                                    <button onClick={() => setSearchQuery("")} className="ml-2 hover:text-yellow-900"><i className="fas fa-times"></i></button>
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Table Content */}
+                                    <div className="bg-white rounded-b-lg shadow overflow-hidden border border-gray-200 border-t-0">
+                                        <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+                                            <table className="min-w-full divide-y divide-gray-200 relative">
+                                                <thead className="bg-gray-50 sticky top-0 z-30 shadow-sm">
+                                                    <tr>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+
+                                                        <SortableHeader
+                                                            label="UUID"
+                                                            sortKey="uuid"
+                                                            currentSort={sortConfig}
+                                                            onSort={handleSort}
+                                                        />
+
+                                                        <SortableHeader
+                                                            label="Grupo / Sub"
+                                                            sortKey="group"
+                                                            currentSort={sortConfig}
+                                                            onSort={handleSort}
+                                                        />
+
+                                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="bg-white divide-y divide-gray-200">
+                                                    {filteredTableList.map(item => (
+                                                        <tr key={item.internalId} className={`
+                                                            ${item.isDuplicate ? 'bg-red-50 border-l-4 border-red-500' : ''}
+                                                            ${item.isExcluded ? "bg-gray-100 opacity-60" : "hover:bg-gray-50"}
+                                                        `}>
+                                                            <td className="px-6 py-2 whitespace-nowrap">
+                                                                {item.isDuplicate ? (
+                                                                    <span className="px-2 inline-flex text-xs leading-5 font-bold rounded-full bg-red-100 text-red-800">
+                                                                        <i className="fas fa-exclamation-triangle mr-1"></i> DUPLICADO
+                                                                    </span>
+                                                                ) : (
+                                                                    item.isExcluded ? (
+                                                                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-200 text-gray-600">
+                                                                            <i className="fas fa-ban mr-1"></i> Excluido
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                                                            Activo
+                                                                        </span>
+                                                                    )
+                                                                )}
+                                                            </td>
+                                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-mono text-gray-600">
+                                                                {searchQuery.length >= 4 ? (
+                                                                    <span>
+                                                                        {item.uuid.split(new RegExp(`(${searchQuery})`, 'gi')).map((part, i) =>
+                                                                            part.toLowerCase() === searchQuery.toLowerCase() ? <span key={i} className="bg-yellow-200 font-bold">{part}</span> : part
+                                                                        )}
+                                                                    </span>
+                                                                ) : item.uuid}
+                                                            </td>
+                                                            <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
+                                                                <span className="font-bold">{item.group}</span> <span className="text-gray-400">/</span> {item.subGroup}
+                                                            </td>
+                                                            <td className="px-6 py-2 whitespace-nowrap text-right text-sm font-medium">
+                                                                <div className="flex items-center justify-end gap-3">
+                                                                    {/* VIEW BUTTON (ALWAYS VISIBLE) */}
+                                                                    <button
+                                                                        onClick={() => openViewer(item.uuid, `${item.group} / ${item.subGroup}`)}
+                                                                        className="text-gray-400 hover:text-blue-600 transition-colors"
+                                                                        title="Ver Código QR y Barras">
+                                                                        <i className="fas fa-qrcode text-lg"></i>
+                                                                    </button>
+
+                                                                    {/* ACTIONS FOR ONE TIME */}
+                                                                    {item.type === 'ONE_TIME' && (
+                                                                        <>
+                                                                            <button
+                                                                                onClick={() => regenerateCode(item)}
+                                                                                className="text-gray-400 hover:text-green-600 transition-colors"
+                                                                                title="Regenerar Código (Crear Nuevo ID)">
+                                                                                <i className="fas fa-sync-alt text-lg"></i>
+                                                                            </button>
+                                                                            <button onClick={() => deleteOneTime(item.internalId)}
+                                                                                className="text-gray-400 hover:text-red-600 transition-colors"
+                                                                                title="Eliminar Definitivamente">
+                                                                                <i className="fas fa-trash-alt text-lg"></i>
+                                                                            </button>
+                                                                        </>
+                                                                    )}
+
+                                                                    {/* ACTIONS FOR PERMANENT */}
+                                                                    {item.type === 'PERMANENT' && (
+                                                                        <button onClick={() => toggleExclusion(item.uuid)}
+                                                                            className={`${item.isExcluded ? "text-blue-600 hover:text-blue-800" : "text-amber-500 hover:text-amber-700"} transition-colors`}
+                                                                            title={item.isExcluded ? "Incluir de nuevo" : "Excluir de este evento (No borrar)"}>
+                                                                            <i className={`fas ${item.isExcluded ? "fa-undo" : "fa-ban"} text-lg`}></i>
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                    {filteredTableList.length === 0 && (
+                                                        <tr>
+                                                            <td colSpan="4" className="px-6 py-10 text-center text-gray-500">
+                                                                {searchQuery.length >= 4
+                                                                    ? <span>No se encontraron UUIDs que contengan <strong>"{searchQuery}"</strong></span>
+                                                                    : (filterGroup
+                                                                        ? (filterGroup === 'DUPLICATES' ? "¡Genial! No hay duplicados en esta pestaña." : <span>No hay acreditaciones de <strong>{filterGroup}</strong> en esta pestaña.</span>)
+                                                                        : <span>No hay acreditaciones en esta lista.</span>)
+                                                                }
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* === CONFIGURATION TAB (NEW STRUCTURE) === */}
+                        {activeTab === 'config' && (
+                            <div>
+                                {/* Config Header / Team Settings */}
+                                <div className="bg-white p-6 rounded-lg shadow border border-gray-200 mb-6">
+                                    <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                        <i className="fas fa-sliders-h text-gray-500"></i> Configuración de Acreditaciones
+                                    </h2>
+                                    <div className="flex flex-col md:flex-row gap-6 items-start">
+                                        <div className="flex-1 w-full space-y-4">
+                                            {/* Team Name */}
+                                            <div>
+                                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">
+                                                    Nombre del Equipo <span className="font-normal normal-case text-gray-400">(Sin espacios ni caracteres especiales)</span>
+                                                </label>
+                                                <div className="relative">
+                                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                        <i className="fas fa-shield-alt text-gray-400"></i>
+                                                    </div>
+                                                    <input
+                                                        type="text"
+                                                        value={teamName}
+                                                        onChange={handleTeamNameChange}
+                                                        className="w-full pl-10 pr-3 py-2 rounded border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-bold text-gray-800 uppercase"
+                                                        placeholder="Ej: CLUBAMERICA"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Code Type Selector */}
+                                            <div className="bg-gray-50 p-3 rounded border border-gray-100">
+                                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Formato de Código Generado</label>
+                                                <div className="flex flex-col sm:flex-row gap-4">
+                                                    <label className="inline-flex items-center cursor-pointer">
+                                                        <input
+                                                            type="radio"
+                                                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                                                            name="codeType"
+                                                            value="UUID"
+                                                            checked={codeType === 'UUID'}
+                                                            onChange={() => setCodeType('UUID')}
+                                                        />
+                                                        <span className="ml-2 text-sm text-gray-700 font-medium">UUID Estándar (Largo)</span>
+                                                    </label>
+                                                    <label className="inline-flex items-center cursor-pointer">
+                                                        <input
+                                                            type="radio"
+                                                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                                                            name="codeType"
+                                                            value="ALPHANUMERIC"
+                                                            checked={codeType === 'ALPHANUMERIC'}
+                                                            onChange={() => setCodeType('ALPHANUMERIC')}
+                                                        />
+                                                        <span className="ml-2 text-sm text-gray-700 font-medium">Alfanumérico (8 caracteres)</span>
+                                                    </label>
+                                                </div>
+                                                <p className="text-xs text-gray-400 mt-1 italic">
+                                                    {codeType === 'ALPHANUMERIC'
+                                                        ? 'Genera códigos cortos seguros (sin I, O, 0, 1). Ej: A7X9M2P4'
+                                                        : 'Genera identificadores únicos universales estándar. Ej: 550e8400-e29b...'}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-3 w-full md:w-auto mt-6">
+                                            <label className="flex-1 md:flex-none cursor-pointer bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded text-sm font-medium flex items-center justify-center gap-2 transition shadow-sm h-[42px]">
+                                                <i className="fas fa-file-import text-blue-500"></i> Importar Config
+                                                <input type="file" className="hidden" onChange={loadJSON} accept=".json" />
+                                            </label>
+                                            <button onClick={downloadJSON} className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-medium flex items-center justify-center gap-2 transition shadow-sm h-[42px]">
+                                                <i className="fas fa-save"></i> Guardar Config
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Config Sub-Navigation */}
+                                <div className="mb-6 border-b border-gray-200">
+                                    <nav className="flex space-x-4" aria-label="Configuration Tabs">
+                                        <button
+                                            onClick={() => setConfigSubTab('groups')}
+                                            className={getConfigSubTabClass(configSubTab === 'groups')}>
+                                            Grupos
+                                        </button>
+                                        <button
+                                            onClick={() => setConfigSubTab('master')}
+                                            className={getConfigSubTabClass(configSubTab === 'master')}>
+                                            Master Permanentes
+                                        </button>
+                                    </nav>
+                                </div>
+
+                                {/* SUB-TAB CONTENT: GROUPS */}
+                                {configSubTab === 'groups' && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-fadeIn">
+                                        {/* GROUPS */}
+                                        <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+                                            <h3 className="font-bold text-gray-700 mb-4 flex items-center gap-2">
+                                                <i className="fas fa-layer-group text-blue-500"></i> Grupos Principales
+                                            </h3>
+                                            <div className="flex gap-2 mb-4">
+                                                <input type="text" value={newGroupInput} onChange={e => setNewGroupInput(e.target.value)}
+                                                    placeholder="Nuevo Grupo..." className="flex-1 border p-2 rounded text-sm" />
+                                                <button onClick={addGroup} className="bg-gray-800 text-white px-3 rounded hover:bg-black"><i className="fas fa-plus"></i></button>
+                                            </div>
+                                            <ul className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                                                {groups.map(g => (
+                                                    <li key={g} className="flex justify-between items-center bg-gray-50 p-2 rounded text-sm border border-gray-100 hover:bg-white hover:border-gray-200 transition-colors">
+                                                        <span>{g}</span>
+                                                        <button onClick={() => removeGroup(g)} className="text-red-400 hover:text-red-600"><i className="fas fa-times"></i></button>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+
+                                        {/* SUBGROUPS */}
+                                        <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+                                            <h3 className="font-bold text-gray-700 mb-4 flex items-center gap-2">
+                                                <i className="fas fa-tags text-green-500"></i> Sub-Grupos
+                                            </h3>
+                                            <div className="flex gap-2 mb-4">
+                                                <input type="text" value={newSubGroupInput} onChange={e => setNewSubGroupInput(e.target.value)}
+                                                    placeholder="Nuevo Sub-Grupo..." className="flex-1 border p-2 rounded text-sm" />
+                                                <button onClick={addSubGroup} className="bg-gray-800 text-white px-3 rounded hover:bg-black"><i className="fas fa-plus"></i></button>
+                                            </div>
+                                            <ul className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                                                {subGroups.map(sg => (
+                                                    <li key={sg} className="flex justify-between items-center bg-gray-50 p-2 rounded text-sm border border-gray-100 hover:bg-white hover:border-gray-200 transition-colors">
+                                                        <span>{sg}</span>
+                                                        <button onClick={() => removeSubGroup(sg)} className="text-red-400 hover:text-red-600"><i className="fas fa-times"></i></button>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* SUB-TAB CONTENT: MASTER PERMANENTES */}
+                                {configSubTab === 'master' && (
+                                    <div className="animate-fadeIn">
+                                        <div className="bg-purple-50 p-4 rounded mb-6 border border-purple-100 text-sm text-purple-800 flex items-start">
+                                            <i className="fas fa-info-circle mr-2 mt-0.5"></i>
+                                            <div>
+                                                <strong>Repositorio Master:</strong> Estas acreditaciones se consideran "de base" para el equipo <strong>{teamName}</strong> y se cargarán automáticamente en todos los nuevos eventos.
+                                            </div>
+                                        </div>
+
+                                        {/* Master Stats Cards */}
+                                        {(Object.keys(masterStatsByGroup).length > 0 || masterDuplicateCount > 0) && (
+                                            <div className="mb-6">
+                                                <h4 className="text-xs font-bold text-gray-400 uppercase mb-2">Resumen Master (Permanentes)</h4>
+                                                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 items-stretch">
+
+                                                    {/* DUPLICATE WARNING CARD */}
+                                                    {masterDuplicateCount > 0 && (
+                                                        <StatCard
+                                                            title="DUPLICADOS"
+                                                            data={{ total: masterDuplicateCount }}
+                                                            colorClass="border-red-500"
+                                                            onClick={() => toggleFilter('DUPLICATES')}
+                                                            isActive={filterGroup === 'DUPLICATES'}
+                                                            isDimmed={filterGroup && filterGroup !== 'DUPLICATES'}
+                                                            isWarning={true}
+                                                        />
+                                                    )}
+
+                                                    {Object.entries(masterStatsByGroup).map(([group, data], idx) => {
+                                                        const colors = ["border-blue-500", "border-green-500", "border-purple-500", "border-orange-500", "border-pink-500", "border-indigo-500", "border-teal-500"];
+                                                        const isActive = filterGroup === group;
+                                                        const isDimmed = filterGroup && !isActive;
+                                                        return <StatCard key={group} title={group} data={data} colorClass={colors[idx % colors.length]} onClick={() => toggleFilter(group)} isActive={isActive} isDimmed={isDimmed} />;
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <GeneratorForm
+                                            targetLabel="Master (Para Siempre)"
+                                            onGenerate={() => generateAccreditations('MASTER')}
+                                            onImport={(file) => handleImport(file, 'MASTER')}
+                                            bulkCount={bulkCount}
+                                            setBulkCount={setBulkCount}
+                                            groups={groups}
+                                            selectedGroup={selectedGroup}
+                                            setSelectedGroup={setSelectedGroup}
+                                            subGroups={subGroups}
+                                            selectedSubGroup={selectedSubGroup}
+                                            setSelectedSubGroup={setSelectedSubGroup}
+                                            currentCodeType={codeType}
+                                        />
+
+                                        {/* Master Search */}
+                                        <div className="mb-4 flex justify-end">
+                                            <div className="w-full sm:w-96">
+                                                <SearchInput value={searchQuery} onChange={setSearchQuery} />
+                                            </div>
+                                        </div>
+
+                                        {/* Active Filter Indicators */}
+                                        {(filterGroup || searchQuery.length >= 4) && (
+                                            <div className="bg-gray-50 px-4 py-2 border border-gray-200 border-b-0 rounded-t-lg flex gap-2 items-center flex-wrap">
+                                                <span className="text-xs font-bold text-gray-400 uppercase mr-2">Filtros Activos:</span>
+
+                                                {filterGroup === 'DUPLICATES' && (
+                                                    <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs flex items-center border border-red-200 font-bold animate-pulse">
+                                                        <i className="fas fa-exclamation-triangle mr-1"></i> MOSTRANDO DUPLICADOS
+                                                        <button onClick={() => setFilterGroup(null)} className="ml-2 hover:text-red-900"><i className="fas fa-times"></i></button>
+                                                    </span>
+                                                )}
+
+                                                {filterGroup && filterGroup !== 'DUPLICATES' && (
+                                                    <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs flex items-center border border-blue-200">
+                                                        Grupo: <strong>{filterGroup}</strong>
+                                                        <button onClick={() => setFilterGroup(null)} className="ml-2 hover:text-blue-900"><i className="fas fa-times"></i></button>
+                                                    </span>
+                                                )}
+
+                                                {searchQuery.length >= 4 && (
+                                                    <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-xs flex items-center border border-yellow-200">
+                                                        Búsqueda: <strong>"{searchQuery}"</strong>
+                                                        <button onClick={() => setSearchQuery("")} className="ml-2 hover:text-yellow-900"><i className="fas fa-times"></i></button>
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        <div className={`bg-white rounded-lg shadow overflow-hidden border border-gray-200 ${filterGroup || searchQuery.length >= 4 ? 'rounded-t-none border-t-0' : ''}`}>
+                                            <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+                                                <h3 className="font-bold text-gray-700">Listado Master</h3>
+                                            </div>
+                                            <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+                                                <table className="min-w-full divide-y divide-gray-200">
+                                                    <thead className="bg-gray-50 sticky top-0 z-10 shadow-sm">
+                                                        <tr>
+                                                            <SortableHeader
+                                                                label="UUID"
+                                                                sortKey="uuid"
+                                                                currentSort={sortConfig}
+                                                                onSort={handleSort}
+                                                            />
+
+                                                            <SortableHeader
+                                                                label="Grupo / Sub"
+                                                                sortKey="group"
+                                                                currentSort={sortConfig}
+                                                                onSort={handleSort}
+                                                            />
+
+                                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="bg-white divide-y divide-gray-200">
+                                                        {filteredMasterList.map(item => (
+                                                            <tr key={item.internalId || item.uuid} className="hover:bg-gray-50">
+                                                                <td className="px-6 py-2 whitespace-nowrap text-sm font-mono text-gray-600">
+                                                                    {searchQuery.length >= 4 ? (
+                                                                        <span>
+                                                                            {item.uuid.split(new RegExp(`(${searchQuery})`, 'gi')).map((part, i) =>
+                                                                                part.toLowerCase() === searchQuery.toLowerCase() ? <span key={i} className="bg-yellow-200 font-bold">{part}</span> : part
+                                                                            )}
+                                                                        </span>
+                                                                    ) : item.uuid}
+                                                                </td>
+                                                                <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
+                                                                    {item.group} / {item.subGroup}
+                                                                </td>
+                                                                <td className="px-6 py-2 whitespace-nowrap text-right text-sm font-medium">
+                                                                    <div className="flex items-center justify-end gap-3">
+                                                                        {/* VIEW BUTTON */}
+                                                                        <button
+                                                                            onClick={() => openViewer(item.uuid, `${item.group} / ${item.subGroup}`)}
+                                                                            className="text-gray-400 hover:text-blue-600 transition-colors"
+                                                                            title="Ver Código QR y Barras">
+                                                                            <i className="fas fa-qrcode text-lg"></i>
+                                                                        </button>
+
+                                                                        {/* REGENERATE BUTTON */}
+                                                                        <button
+                                                                            onClick={() => regenerateCode(item)}
+                                                                            className="text-gray-400 hover:text-green-600 transition-colors"
+                                                                            title="Regenerar Código (Crear Nuevo ID)">
+                                                                            <i className="fas fa-sync-alt text-lg"></i>
+                                                                        </button>
+
+                                                                        {/* DELETE BUTTON */}
+                                                                        <button onClick={() => deletePermanentFromMaster(item)}
+                                                                            className="text-gray-400 hover:text-red-600 transition-colors"
+                                                                            title="Eliminar Definitivamente">
+                                                                            <i className="fas fa-trash-alt text-lg"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                        {filteredMasterList.length === 0 && (
+                                                            <tr>
+                                                                <td colSpan="3" className="px-6 py-10 text-center text-gray-500">
+                                                                    {searchQuery.length >= 4
+                                                                        ? "No se encontraron resultados."
+                                                                        : (filterGroup
+                                                                            ? <span>No hay registros en el grupo <strong>{filterGroup}</strong>.</span>
+                                                                            : "El Master está vacío.")}
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                    </main>
+
+                    {/* Footer */}
+                    <footer className="bg-white border-t border-gray-200 mt-auto py-4">
+                        <div className="max-w-7xl mx-auto px-4 text-center text-xs text-gray-500">
+                            Fanki Internal Tool &copy; {new Date().getFullYear()}
+                        </div>
+                    </footer>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+
+</html>
