@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Animation Mockup Tool v4</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', sans-serif;
+    background: #0a0a0a;
+    color: #e0e0e0;
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ── CONTROLS ── */
+  .controls {
+    width: 340px; min-width: 340px;
+    background: #141414;
+    border-right: 1px solid #2a2a2a;
+    padding: 20px;
+    overflow-y: auto;
+    height: 100vh;
+    position: sticky; top: 0;
+  }
+  .controls h2 {
+    font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    color: #666; margin: 16px 0 8px;
+  }
+  .controls h2:first-child { margin-top: 0; }
+  label { display: block; font-size: 12px; color: #999; margin-bottom: 4px; }
+  select {
+    width: 100%; background: #1e1e1e; border: 1px solid #333;
+    color: #ddd; padding: 6px 8px; border-radius: 6px; font-size: 13px;
+  }
+  .range-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .range-row input { flex: 1; }
+  .range-val { font-size: 12px; color: #888; min-width: 42px; text-align: right; font-variant-numeric: tabular-nums; }
+  input[type="range"] {
+    -webkit-appearance: none; height: 4px; background: #333;
+    border-radius: 2px; outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px;
+    background: #fff; border-radius: 50%; cursor: pointer;
+  }
+  .divider { height: 1px; background: #2a2a2a; margin: 12px 0; }
+  .btn-row { display: flex; gap: 6px; margin-top: 8px; }
+  .btn {
+    flex: 1; padding: 10px; border: none; border-radius: 8px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .btn-primary { background: #fff; color: #000; }
+  .btn-primary:hover { background: #ddd; }
+  .btn-secondary { background: #2a2a2a; color: #ccc; }
+  .btn-secondary:hover { background: #333; }
+  .toggle-row { display: flex; gap: 4px; margin-bottom: 6px; }
+  .toggle-btn {
+    flex: 1; padding: 6px; background: #1e1e1e; border: 1px solid #333;
+    border-radius: 6px; color: #888; font-size: 11px; cursor: pointer; text-align: center;
+  }
+  .toggle-btn:hover { border-color: #555; }
+  .toggle-btn.on { border-color: #fff; color: #fff; }
+  .code-out {
+    background: #1a1a1a; border: 1px solid #333; border-radius: 8px;
+    padding: 10px; font-family: 'SF Mono', monospace; font-size: 11px;
+    color: #8f8; white-space: pre-wrap; max-height: 320px; overflow-y: auto; line-height: 1.5;
+  }
+  .title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .title-row h1 { font-size: 16px; font-weight: 700; }
+  .back-home {
+    color: #888; text-decoration: none; font-size: 12px; font-weight: 400;
+    padding: 3px 8px; border: 1px solid #333; border-radius: 4px;
+    transition: color 0.15s, border-color 0.15s; white-space: nowrap;
+  }
+  .back-home:hover { color: #e0e0e0; border-color: #888; }
+  .badge { font-size: 10px; padding: 2px 8px; background: #2a2a2a; border-radius: 10px; color: #888; }
+  .controls::-webkit-scrollbar { width: 4px; }
+  .controls::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+  /* Level selector */
+  .level-select {
+    width: 100%; background: #1a1a2e; border: 1px solid #4a4aff;
+    color: #aaf; padding: 8px 10px; border-radius: 8px; font-size: 13px;
+    font-weight: 600;
+  }
+
+  /* Anim section block */
+  .anim-section {
+    background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px;
+    padding: 10px 12px; margin-bottom: 8px;
+  }
+  .anim-section h3 {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; margin-bottom: 8px;
+  }
+  .anim-section h3.exit-label { color: #f88; }
+  .anim-section h3.entry-label { color: #8f8; }
+  .anim-section label { margin-top: 6px; }
+  .anim-section label:first-of-type { margin-top: 0; }
+
+  /* Stagger row / fade row - hide when not applicable */
+  .stagger-row, .fade-toggle { transition: opacity 0.2s; }
+  .stagger-row.hidden, .fade-toggle.hidden { opacity: 0.3; pointer-events: none; }
+
+  /* Level panels */
+  .level-panel { display: none; }
+  .level-panel.active { display: block; }
+
+  /* ── PRESETS ── */
+  .presets-bar {
+    position: absolute; top: 20px; left: 20px; display: flex; gap: 6px; z-index: 20;
+  }
+  .preset-btn {
+    padding: 7px 14px; border: 1px solid #333; border-radius: 8px;
+    background: #1a1a1a; color: #ccc; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  }
+  .preset-btn:hover { background: #2a2a2a; border-color: #8b5cf6; color: #fff; }
+  .preset-btn.active { border-color: #8b5cf6; color: #fff; background: #2a1a4a; }
+
+  /* ── PREVIEW ── */
+  .preview-area {
+    flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px;
+    position: relative;
+  }
+  .phone {
+    width: 375px; height: 750px; background: #f0f4f8; border-radius: 44px;
+    position: relative; overflow: hidden;
+    box-shadow: 0 0 0 3px #333, 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .notch {
+    position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 30px; background: #000; border-radius: 0 0 18px 18px; z-index: 10;
+  }
+  .statusbar {
+    display: flex; justify-content: space-between; padding: 14px 28px 0;
+    font-size: 14px; font-weight: 600; color: #000; z-index: 5; position: relative;
+  }
+  .screen { padding: 16px; padding-top: 8px; overflow: hidden; }
+
+  /* ── STEP 1 ── */
+  .step1 { display: block; }
+  .step2 { display: none; }
+  .phone.at-step2 .step1 { display: none; }
+  .phone.at-step2 .step2 { display: block; }
+
+  .tabs { display: flex; justify-content: center; gap: 6px; margin-bottom: 16px; }
+  .tab {
+    padding: 8px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;
+    color: #6a8aaa; background: #e4ecf4; cursor: pointer;
+    display: flex; align-items: center; gap: 5px;
+    position: relative;
+  }
+  .tab:nth-child(1) { z-index: 3; }
+  .tab:nth-child(2) { z-index: 2; }
+  .tab:nth-child(3) { z-index: 1; }
+  .tab.on { color: #fff; background: #4a8ad4; font-weight: 600; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .chip {
+    padding: 8px 14px; border-radius: 18px; font-size: 13px; font-weight: 500;
+    color: #5a7aa0; background: #e4ecf4; cursor: pointer;
+    display: flex; align-items: center; gap: 5px;
+    position: relative;
+  }
+  .chip:nth-child(1) { z-index: 6; }
+  .chip:nth-child(2) { z-index: 5; }
+  .chip:nth-child(3) { z-index: 4; }
+  .chip:nth-child(4) { z-index: 3; }
+  .chip:nth-child(5) { z-index: 2; }
+  .chip:nth-child(6) { z-index: 1; }
+  .chip:hover { background: #d8e4f0; }
+
+  .hero {
+    height: 240px; border-radius: 20px; overflow: hidden; position: relative;
+    background: linear-gradient(135deg, #1a1a3e, #0d0d2b 50%, #1a2a4e);
+  }
+  .hero-text { position: absolute; bottom: 20px; left: 20px; color: #fff; z-index: 1; }
+  .hero-text h3 { font-size: 20px; font-weight: 700; }
+  .hero-text p { font-size: 12px; opacity: 0.7; margin-top: 4px; }
+  .hero::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.5), transparent);
+  }
+
+  /* ── STEP 2 ── */
+  .detail-nav { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+  .back {
+    padding: 8px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;
+    color: #5a7aa0; background: #e4ecf4; border: none; cursor: pointer;
+    display: flex; align-items: center; gap: 4px;
+    position: relative; z-index: 2;
+  }
+  .back:hover { background: #d8e4f0; }
+  .detail-tag {
+    padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600;
+    color: #fff; background: #4a8ad4;
+    position: relative; z-index: 1;
+  }
+  .logos { display: flex; justify-content: center; gap: 16px; margin-bottom: 16px; }
+  .logo-circle {
+    width: 72px; height: 72px; border-radius: 50%; background: #e4ecf4;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; font-weight: 800; color: #1a3a6a; font-family: serif;
+    border: 3px solid #d0dff0;
+    position: relative;
+  }
+  .logo-circle:nth-child(1) { z-index: 3; }
+  .logo-circle:nth-child(2) { z-index: 2; }
+  .logo-circle:nth-child(3) { z-index: 1; }
+  .detail-hero {
+    height: 240px; border-radius: 20px; overflow: hidden; position: relative;
+    background: linear-gradient(135deg, #0a1628, #162a4e);
+  }
+  .detail-hero-inner {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,0.15); font-size: 80px; font-weight: 900; font-family: serif;
+  }
+
+  /* ════════════════════════════════════
+     ANIMATIONS - Pure CSS, JS toggles classes
+     Each level (tabs/chips) has own vars:
+       --L-exit-anim, --L-exit-dur, --L-exit-ease
+       --L-entry-anim, --L-entry-dur, --L-entry-ease
+       --L-stag
+  ════════════════════════════════════ */
+
+  /* ── TABS EXIT ── */
+  .phone.tabs-exiting .step1 .tabs {
+    animation: var(--tab-exit-anim, fadeOut) var(--tab-exit-dur, 350ms) var(--tab-exit-ease, ease) forwards;
+  }
+  .phone.tabs-exiting.tabs-exit-individual .step1 .tabs { animation: none !important; }
+  .phone.tabs-exiting.tabs-exit-individual .step1 .tab:nth-child(1) {
+    animation: var(--tab-exit-anim, fadeOut) var(--tab-exit-dur, 350ms) var(--tab-exit-ease, ease) calc(var(--tab-stag, 80ms) * 0) forwards;
+  }
+  .phone.tabs-exiting.tabs-exit-individual .step1 .tab:nth-child(2) {
+    animation: var(--tab-exit-anim, fadeOut) var(--tab-exit-dur, 350ms) var(--tab-exit-ease, ease) calc(var(--tab-stag, 80ms) * 1) forwards;
+  }
+  .phone.tabs-exiting.tabs-exit-individual .step1 .tab:nth-child(3) {
+    animation: var(--tab-exit-anim, fadeOut) var(--tab-exit-dur, 350ms) var(--tab-exit-ease, ease) calc(var(--tab-stag, 80ms) * 2) forwards;
+  }
+
+  /* ── CHIPS EXIT ── */
+  .phone.chips-exiting .step1 .chips {
+    animation: var(--chip-exit-anim, fadeOut) var(--chip-exit-dur, 350ms) var(--chip-exit-ease, ease) forwards;
+  }
+  .phone.chips-exiting.chips-exit-individual .step1 .chips { animation: none !important; }
+  .phone.chips-exiting.chips-exit-individual .step1 .chip:nth-child(1) {
+    animation: var(--chip-exit-anim, fadeOut) var(--chip-exit-dur, 350ms) var(--chip-exit-ease, ease) calc(var(--chip-stag, 40ms) * 0) forwards;
+  }
+  .phone.chips-exiting.chips-exit-individual .step1 .chip:nth-child(2) {
+    animation: var(--chip-exit-anim, fadeOut) var(--chip-exit-dur, 350ms) var(--chip-exit-ease, ease) calc(var(--chip-stag, 40ms) * 1) forwards;
+  }
+  .phone.chips-exiting.chips-exit-individual .step1 .chip:nth-child(3) {
+    animation: var(--chip-exit-anim, fadeOut) var(--chip-exit-dur, 350ms) var(--chip-exit-ease, ease) calc(var(--chip-stag, 40ms) * 2) forwards;
+  }
+  .phone.chips-exiting.chips-exit-individual .step1 .chip:nth-child(4) {
+    animation: var(--chip-exit-anim, fadeOut) var(--chip-exit-dur, 350ms) var(--chip-exit-ease, ease) calc(var(--chip-stag, 40ms) * 3) forwards;
+  }
+  .phone.chips-exiting.chips-exit-individual .step1 .chip:nth-child(5) {
+    animation: var(--chip-exit-anim, fadeOut) var(--chip-exit-dur, 350ms) var(--chip-exit-ease, ease) calc(var(--chip-stag, 40ms) * 4) forwards;
+  }
+  .phone.chips-exiting.chips-exit-individual .step1 .chip:nth-child(6) {
+    animation: var(--chip-exit-anim, fadeOut) var(--chip-exit-dur, 350ms) var(--chip-exit-ease, ease) calc(var(--chip-stag, 40ms) * 5) forwards;
+  }
+
+  /* ── HERO EXIT (always fade) ── */
+  .phone.tabs-exiting .step1 .hero,
+  .phone.chips-exiting .step1 .hero {
+    animation: fadeOut var(--tab-exit-dur, 350ms) var(--tab-exit-ease, ease) forwards;
+  }
+
+  /* ── Going TO step 2 — Group mode (default) ── */
+  .phone.at-step2 .step2 .detail-nav {
+    animation: var(--tab-entry-anim, enterRight) var(--tab-entry-dur, 350ms) var(--tab-entry-ease, ease) backwards;
+  }
+  .phone.at-step2 .step2 .logos,
+  .phone.at-step2 .step2 .detail-hero {
+    animation: fadeIn var(--tab-entry-dur, 350ms) var(--tab-entry-ease, ease) backwards;
+  }
+  .phone.at-step2 .step2 .logos { animation-delay: calc(var(--tab-entry-stag, 120ms) * 2); }
+  .phone.at-step2 .step2 .detail-hero { animation-delay: calc(var(--tab-entry-stag, 120ms) * 3); }
+  .phone.at-step2 .step2 .logo-circle {
+    animation: fadeScale var(--tab-entry-dur, 350ms) var(--tab-entry-ease, ease) backwards;
+  }
+  .phone.at-step2 .step2 .logo-circle:nth-child(1) { animation-delay: calc(var(--tab-entry-stag, 120ms) * 1); }
+  .phone.at-step2 .step2 .logo-circle:nth-child(2) { animation-delay: calc(var(--tab-entry-stag, 120ms) * 2); }
+  .phone.at-step2 .step2 .logo-circle:nth-child(3) { animation-delay: calc(var(--tab-entry-stag, 120ms) * 3); }
+
+  /* ── Going TO step 2 — Individual mode: back + tag enter separately ── */
+  .phone.at-step2.tabs-entry-individual .step2 .detail-nav { animation: none !important; }
+  .phone.at-step2.tabs-entry-individual .step2 .detail-nav .back {
+    animation: var(--tab-entry-anim, enterRight) var(--tab-entry-dur, 350ms) var(--tab-entry-ease, ease) calc(var(--tab-entry-stag, 120ms) * 0) backwards;
+  }
+  .phone.at-step2.tabs-entry-individual .step2 .detail-nav .detail-tag {
+    animation: var(--tab-entry-anim, enterRight) var(--tab-entry-dur, 350ms) var(--tab-entry-ease, ease) calc(var(--tab-entry-stag, 120ms) * 1) backwards;
+  }
+  .phone.at-step2.tabs-entry-individual .step2 .logos {
+    animation: fadeIn var(--tab-entry-dur, 350ms) var(--tab-entry-ease, ease) calc(var(--tab-entry-stag, 120ms) * 2) backwards;
+  }
+  .phone.at-step2.tabs-entry-individual .step2 .detail-hero {
+    animation: fadeIn var(--tab-entry-dur, 350ms) var(--tab-entry-ease, ease) calc(var(--tab-entry-stag, 120ms) * 3) backwards;
+  }
+  .phone.at-step2.tabs-entry-individual .step2 .logo-circle:nth-child(1) {
+    animation: fadeScale var(--tab-entry-dur, 350ms) var(--tab-entry-ease, ease) calc(var(--tab-entry-stag, 120ms) * 2) backwards;
+  }
+  .phone.at-step2.tabs-entry-individual .step2 .logo-circle:nth-child(2) {
+    animation: fadeScale var(--tab-entry-dur, 350ms) var(--tab-entry-ease, ease) calc(var(--tab-entry-stag, 120ms) * 3) backwards;
+  }
+  .phone.at-step2.tabs-entry-individual .step2 .logo-circle:nth-child(3) {
+    animation: fadeScale var(--tab-entry-dur, 350ms) var(--tab-entry-ease, ease) calc(var(--tab-entry-stag, 120ms) * 4) backwards;
+  }
+
+  /* ── Step 2 EXIT (when going back) — Group mode ── */
+  .phone.step2-exiting .step2 .detail-nav {
+    animation: var(--tab-exit-anim, exitLeft) var(--tab-exit-dur, 350ms) var(--tab-exit-ease, ease) forwards;
+  }
+  .phone.step2-exiting .step2 .logos {
+    animation: fadeOut var(--tab-exit-dur, 350ms) var(--tab-exit-ease, ease) forwards;
+  }
+  .phone.step2-exiting .step2 .detail-hero {
+    animation: fadeOut var(--tab-exit-dur, 350ms) var(--tab-exit-ease, ease) forwards;
+  }
+
+  /* ── Step 2 EXIT — Individual mode ── */
+  .phone.step2-exiting.tabs-exit-individual .step2 .detail-nav { animation: none !important; }
+  .phone.step2-exiting.tabs-exit-individual .step2 .detail-nav .back {
+    animation: var(--tab-exit-anim, exitLeft) var(--tab-exit-dur, 350ms) var(--tab-exit-ease, ease) calc(var(--tab-stag, 120ms) * 0) forwards;
+  }
+  .phone.step2-exiting.tabs-exit-individual .step2 .detail-nav .detail-tag {
+    animation: var(--tab-exit-anim, exitLeft) var(--tab-exit-dur, 350ms) var(--tab-exit-ease, ease) calc(var(--tab-stag, 120ms) * 1) forwards;
+  }
+  .phone.step2-exiting.tabs-exit-individual .step2 .logos {
+    animation: fadeOut var(--tab-exit-dur, 350ms) var(--tab-exit-ease, ease) calc(var(--tab-stag, 120ms) * 2) forwards;
+  }
+  .phone.step2-exiting.tabs-exit-individual .step2 .detail-hero {
+    animation: fadeOut var(--tab-exit-dur, 350ms) var(--tab-exit-ease, ease) calc(var(--tab-stag, 120ms) * 3) forwards;
+  }
+
+  /* ── Going BACK to step 1 ── */
+
+  /* Tabs entry */
+  .phone.back-to-1 .step1 .tabs {
+    animation: var(--tab-entry-anim, fadeIn) var(--tab-entry-dur, 350ms) var(--tab-entry-ease, ease) backwards;
+  }
+  .phone.back-to-1.tabs-entry-individual .step1 .tabs { animation: none !important; }
+  .phone.back-to-1.tabs-entry-individual .step1 .tab:nth-child(1) {
+    animation: var(--tab-entry-anim, fadeIn) var(--tab-entry-dur, 350ms) var(--tab-entry-ease, ease) calc(var(--tab-entry-stag, 80ms) * 0) backwards;
+  }
+  .phone.back-to-1.tabs-entry-individual .step1 .tab:nth-child(2) {
+    animation: var(--tab-entry-anim, fadeIn) var(--tab-entry-dur, 350ms) var(--tab-entry-ease, ease) calc(var(--tab-entry-stag, 80ms) * 1) backwards;
+  }
+  .phone.back-to-1.tabs-entry-individual .step1 .tab:nth-child(3) {
+    animation: var(--tab-entry-anim, fadeIn) var(--tab-entry-dur, 350ms) var(--tab-entry-ease, ease) calc(var(--tab-entry-stag, 80ms) * 2) backwards;
+  }
+
+  /* Chips entry */
+  .phone.back-to-1 .step1 .chips {
+    animation: var(--chip-entry-anim, fadeIn) var(--chip-entry-dur, 350ms) var(--chip-entry-ease, ease) backwards;
+  }
+  .phone.back-to-1.chips-entry-individual .step1 .chips { animation: none !important; }
+  .phone.back-to-1.chips-entry-individual .step1 .chip:nth-child(1) {
+    animation: var(--chip-entry-anim, fadeIn) var(--chip-entry-dur, 350ms) var(--chip-entry-ease, ease) calc(var(--chip-entry-stag, 40ms) * 0) backwards;
+  }
+  .phone.back-to-1.chips-entry-individual .step1 .chip:nth-child(2) {
+    animation: var(--chip-entry-anim, fadeIn) var(--chip-entry-dur, 350ms) var(--chip-entry-ease, ease) calc(var(--chip-entry-stag, 40ms) * 1) backwards;
+  }
+  .phone.back-to-1.chips-entry-individual .step1 .chip:nth-child(3) {
+    animation: var(--chip-entry-anim, fadeIn) var(--chip-entry-dur, 350ms) var(--chip-entry-ease, ease) calc(var(--chip-entry-stag, 40ms) * 2) backwards;
+  }
+  .phone.back-to-1.chips-entry-individual .step1 .chip:nth-child(4) {
+    animation: var(--chip-entry-anim, fadeIn) var(--chip-entry-dur, 350ms) var(--chip-entry-ease, ease) calc(var(--chip-entry-stag, 40ms) * 3) backwards;
+  }
+  .phone.back-to-1.chips-entry-individual .step1 .chip:nth-child(5) {
+    animation: var(--chip-entry-anim, fadeIn) var(--chip-entry-dur, 350ms) var(--chip-entry-ease, ease) calc(var(--chip-entry-stag, 40ms) * 4) backwards;
+  }
+  .phone.back-to-1.chips-entry-individual .step1 .chip:nth-child(6) {
+    animation: var(--chip-entry-anim, fadeIn) var(--chip-entry-dur, 350ms) var(--chip-entry-ease, ease) calc(var(--chip-entry-stag, 40ms) * 5) backwards;
+  }
+
+  /* Hero entry (always fade) */
+  .phone.back-to-1 .step1 .hero {
+    animation: fadeIn var(--tab-entry-dur, 350ms) var(--tab-entry-ease, ease) backwards;
+    animation-delay: calc(var(--tab-entry-stag, 30ms) * 3);
+  }
+
+  /* ── KEYFRAMES: ENTRY (with fade) ──
+     Slide values use 400px (> phone width 375px) so elements
+     truly enter/exit from OFF-SCREEN, not just their own width */
+  @keyframes enterRight { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  @keyframes enterLeft  { from { transform: translateX(-400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  @keyframes enterUp    { from { transform: translateY(400px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @keyframes enterDown  { from { transform: translateY(-400px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @keyframes fadeIn     { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes scaleIn    { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  @keyframes popIn      { 0% { transform: scale(0.5); opacity: 0; } 70% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); } }
+  @keyframes bounceIn   { 0% { transform: translateY(60px) scale(0.9); opacity: 0; } 60% { transform: translateY(-8px) scale(1.02); opacity: 1; } 100% { transform: translateY(0) scale(1); } }
+  @keyframes fadeScale  { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  /* ── KEYFRAMES: ENTRY (no fade) ── */
+  @keyframes enterRightNF { from { transform: translateX(400px); } to { transform: translateX(0); } }
+  @keyframes enterLeftNF  { from { transform: translateX(-400px); } to { transform: translateX(0); } }
+  @keyframes enterUpNF    { from { transform: translateY(400px); } to { transform: translateY(0); } }
+  @keyframes enterDownNF  { from { transform: translateY(-400px); } to { transform: translateY(0); } }
+  @keyframes scaleInNF    { from { transform: scale(0.8); } to { transform: scale(1); } }
+  @keyframes popInNF      { 0% { transform: scale(0.5); } 70% { transform: scale(1.08); } 100% { transform: scale(1); } }
+  @keyframes bounceInNF   { 0% { transform: translateY(60px) scale(0.9); } 60% { transform: translateY(-8px) scale(1.02); } 100% { transform: translateY(0) scale(1); } }
+
+  /* ── KEYFRAMES: EXIT (with fade) ── */
+  @keyframes fadeOut    { from { opacity: 1; } to { opacity: 0; } }
+  @keyframes exitLeft   { from { transform: translateX(0); opacity: 1; } to { transform: translateX(-400px); opacity: 0; } }
+  @keyframes exitRight  { from { transform: translateX(0); opacity: 1; } to { transform: translateX(400px); opacity: 0; } }
+  @keyframes exitUp     { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-400px); opacity: 0; } }
+  @keyframes exitDown   { from { transform: translateY(0); opacity: 1; } to { transform: translateY(400px); opacity: 0; } }
+  @keyframes scaleOut   { from { transform: scale(1); opacity: 1; } to { transform: scale(0.7); opacity: 0; } }
+
+  /* ── KEYFRAMES: EXIT (no fade) ── */
+  @keyframes exitLeftNF   { from { transform: translateX(0); } to { transform: translateX(-400px); } }
+  @keyframes exitRightNF  { from { transform: translateX(0); } to { transform: translateX(400px); } }
+  @keyframes exitUpNF     { from { transform: translateY(0); } to { transform: translateY(-400px); } }
+  @keyframes exitDownNF   { from { transform: translateY(0); } to { transform: translateY(400px); } }
+  @keyframes scaleOutNF   { from { transform: scale(1); } to { transform: scale(0.7); } }
+</style>
+</head>
+<body>
+
+<div class="controls">
+  <a href="../../index.html" class="back-home" title="Volver a Ops Tools">← Ops Tools</a>
+  <div class="title-row" style="margin-top:10px;">
+    <h1>Animation Mockup</h1>
+    <span class="badge">v4</span>
+  </div>
+
+  <p style="font-size:11px; color:#555; line-height: 1.4; margin-bottom:12px;">
+    Click chip to go forward, &#8249; to go back.
+  </p>
+
+  <div class="divider"></div>
+
+  <h2>Nivel a configurar</h2>
+  <select class="level-select" id="levelSelect">
+    <option value="tabs">Nivel 1 &#8212; Categorias (Todos, Deportes, Entretenimiento)</option>
+    <option value="chips">Nivel 2 &#8212; Deportes (Futbol, Basket, Tenis...)</option>
+  </select>
+
+  <!-- ═══ NIVEL 1: TABS ═══ -->
+  <div class="level-panel active" id="panel-tabs">
+
+    <div class="anim-section" style="margin-top:12px;">
+      <h3 class="exit-label">&#9654; Salida (Exit)</h3>
+
+      <label>Tipo de animacion</label>
+      <select id="tab-exit-type">
+        <option value="fadeOut">Fade Out</option>
+        <option value="exitLeft" selected>Slide Left</option>
+        <option value="exitRight">Slide Right</option>
+        <option value="exitUp">Slide Up</option>
+        <option value="exitDown">Slide Down</option>
+        <option value="scaleOut">Scale Down</option>
+      </select>
+
+      <div class="fade-toggle" id="tab-exit-fade-row">
+        <label>Fade durante animacion</label>
+        <div class="toggle-row" id="tab-exit-fade">
+          <div class="toggle-btn on" data-val="fade">Con Fade</div>
+          <div class="toggle-btn" data-val="nofade">Sin Fade</div>
+        </div>
+      </div>
+
+      <label>Grupo o Individual</label>
+      <div class="toggle-row" id="tab-exit-mode">
+        <div class="toggle-btn on" data-val="individual">Individual</div>
+        <div class="toggle-btn" data-val="group">Grupo</div>
+      </div>
+
+      <div class="stagger-row" id="tab-exit-stagger-row">
+        <label>Stagger (espacio entre cada uno)</label>
+        <div class="range-row">
+          <input type="range" id="tab-stag" min="0" max="200" value="120" step="5">
+          <span class="range-val" id="tab-stag-val">120ms</span>
+        </div>
+      </div>
+
+      <label>Easing</label>
+      <select id="tab-exit-ease">
+        <option value="cubic-bezier(0.4, 0, 0.2, 1)">Material (smooth)</option>
+        <option value="ease">ease</option>
+        <option value="ease-in-out">ease-in-out</option>
+        <option value="ease-in">ease-in</option>
+        <option value="cubic-bezier(0.34, 1.56, 0.64, 1)">spring</option>
+        <option value="cubic-bezier(0.68, -0.55, 0.265, 1.55)">bounce</option>
+        <option value="cubic-bezier(0.22, 1, 0.36, 1)">ease-out-expo</option>
+        <option value="linear">linear</option>
+      </select>
+
+      <label>Duracion</label>
+      <div class="range-row">
+        <input type="range" id="tab-exit-dur" min="100" max="1200" value="300" step="10">
+        <span class="range-val" id="tab-exit-dur-val">300ms</span>
+      </div>
+    </div>
+
+    <div class="anim-section">
+      <h3 class="entry-label">&#9664; Entrada (Entry)</h3>
+
+      <label>Tipo de animacion</label>
+      <select id="tab-entry-type">
+        <option value="fadeIn">Fade In</option>
+        <option value="enterRight">Slide Right</option>
+        <option value="enterLeft" selected>Slide Left</option>
+        <option value="enterUp">Slide Up</option>
+        <option value="enterDown">Slide Down</option>
+        <option value="scaleIn">Scale</option>
+        <option value="popIn">Pop</option>
+        <option value="bounceIn">Bounce</option>
+      </select>
+
+      <div class="fade-toggle" id="tab-entry-fade-row">
+        <label>Fade durante animacion</label>
+        <div class="toggle-row" id="tab-entry-fade">
+          <div class="toggle-btn on" data-val="fade">Con Fade</div>
+          <div class="toggle-btn" data-val="nofade">Sin Fade</div>
+        </div>
+      </div>
+
+      <label>Grupo o Individual</label>
+      <div class="toggle-row" id="tab-entry-mode">
+        <div class="toggle-btn on" data-val="individual">Individual</div>
+        <div class="toggle-btn" data-val="group">Grupo</div>
+      </div>
+
+      <div class="stagger-row" id="tab-entry-stagger-row">
+        <label>Stagger (espacio entre cada uno)</label>
+        <div class="range-row">
+          <input type="range" id="tab-entry-stag" min="0" max="200" value="120" step="5">
+          <span class="range-val" id="tab-entry-stag-val">120ms</span>
+        </div>
+      </div>
+
+      <label>Easing</label>
+      <select id="tab-entry-ease">
+        <option value="cubic-bezier(0.4, 0, 0.2, 1)">Material (smooth)</option>
+        <option value="ease">ease</option>
+        <option value="ease-in-out">ease-in-out</option>
+        <option value="ease-in">ease-in</option>
+        <option value="cubic-bezier(0.34, 1.56, 0.64, 1)">spring</option>
+        <option value="cubic-bezier(0.68, -0.55, 0.265, 1.55)">bounce</option>
+        <option value="cubic-bezier(0.22, 1, 0.36, 1)">ease-out-expo</option>
+        <option value="linear">linear</option>
+      </select>
+
+      <label>Duracion</label>
+      <div class="range-row">
+        <input type="range" id="tab-entry-dur" min="100" max="1200" value="350" step="10">
+        <span class="range-val" id="tab-entry-dur-val">350ms</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ NIVEL 2: CHIPS ═══ -->
+  <div class="level-panel" id="panel-chips">
+
+    <div class="anim-section" style="margin-top:12px;">
+      <h3 class="exit-label">&#9654; Salida (Exit)</h3>
+
+      <label>Tipo de animacion</label>
+      <select id="chip-exit-type">
+        <option value="fadeOut">Fade Out</option>
+        <option value="exitLeft" selected>Slide Left</option>
+        <option value="exitRight">Slide Right</option>
+        <option value="exitUp">Slide Up</option>
+        <option value="exitDown">Slide Down</option>
+        <option value="scaleOut">Scale Down</option>
+      </select>
+
+      <div class="fade-toggle" id="chip-exit-fade-row">
+        <label>Fade durante animacion</label>
+        <div class="toggle-row" id="chip-exit-fade">
+          <div class="toggle-btn on" data-val="fade">Con Fade</div>
+          <div class="toggle-btn" data-val="nofade">Sin Fade</div>
+        </div>
+      </div>
+
+      <label>Grupo o Individual</label>
+      <div class="toggle-row" id="chip-exit-mode">
+        <div class="toggle-btn on" data-val="individual">Individual</div>
+        <div class="toggle-btn" data-val="group">Grupo</div>
+      </div>
+
+      <div class="stagger-row" id="chip-exit-stagger-row">
+        <label>Stagger (espacio entre cada uno)</label>
+        <div class="range-row">
+          <input type="range" id="chip-stag" min="0" max="200" value="40" step="5">
+          <span class="range-val" id="chip-stag-val">40ms</span>
+        </div>
+      </div>
+
+      <label>Easing</label>
+      <select id="chip-exit-ease">
+        <option value="cubic-bezier(0.4, 0, 0.2, 1)">Material (smooth)</option>
+        <option value="ease">ease</option>
+        <option value="ease-in-out">ease-in-out</option>
+        <option value="ease-in">ease-in</option>
+        <option value="cubic-bezier(0.34, 1.56, 0.64, 1)">spring</option>
+        <option value="cubic-bezier(0.68, -0.55, 0.265, 1.55)">bounce</option>
+        <option value="cubic-bezier(0.22, 1, 0.36, 1)">ease-out-expo</option>
+        <option value="linear">linear</option>
+      </select>
+
+      <label>Duracion</label>
+      <div class="range-row">
+        <input type="range" id="chip-exit-dur" min="100" max="1200" value="300" step="10">
+        <span class="range-val" id="chip-exit-dur-val">300ms</span>
+      </div>
+    </div>
+
+    <div class="anim-section">
+      <h3 class="entry-label">&#9664; Entrada (Entry)</h3>
+
+      <label>Tipo de animacion</label>
+      <select id="chip-entry-type">
+        <option value="fadeIn">Fade In</option>
+        <option value="enterRight">Slide Right</option>
+        <option value="enterLeft">Slide Left</option>
+        <option value="enterUp">Slide Up</option>
+        <option value="enterDown">Slide Down</option>
+        <option value="scaleIn">Scale</option>
+        <option value="popIn" selected>Pop</option>
+        <option value="bounceIn">Bounce</option>
+      </select>
+
+      <div class="fade-toggle" id="chip-entry-fade-row">
+        <label>Fade durante animacion</label>
+        <div class="toggle-row" id="chip-entry-fade">
+          <div class="toggle-btn on" data-val="fade">Con Fade</div>
+          <div class="toggle-btn" data-val="nofade">Sin Fade</div>
+        </div>
+      </div>
+
+      <label>Grupo o Individual</label>
+      <div class="toggle-row" id="chip-entry-mode">
+        <div class="toggle-btn on" data-val="individual">Individual</div>
+        <div class="toggle-btn" data-val="group">Grupo</div>
+      </div>
+
+      <div class="stagger-row" id="chip-entry-stagger-row">
+        <label>Stagger (espacio entre cada uno)</label>
+        <div class="range-row">
+          <input type="range" id="chip-entry-stag" min="0" max="200" value="40" step="5">
+          <span class="range-val" id="chip-entry-stag-val">40ms</span>
+        </div>
+      </div>
+
+      <label>Easing</label>
+      <select id="chip-entry-ease">
+        <option value="cubic-bezier(0.4, 0, 0.2, 1)">Material (smooth)</option>
+        <option value="ease">ease</option>
+        <option value="ease-in-out">ease-in-out</option>
+        <option value="ease-in">ease-in</option>
+        <option value="cubic-bezier(0.34, 1.56, 0.64, 1)">spring</option>
+        <option value="cubic-bezier(0.68, -0.55, 0.265, 1.55)">bounce</option>
+        <option value="cubic-bezier(0.22, 1, 0.36, 1)">ease-out-expo</option>
+        <option value="linear">linear</option>
+      </select>
+
+      <label>Duracion</label>
+      <div class="range-row">
+        <input type="range" id="chip-entry-dur" min="100" max="1200" value="350" step="10">
+        <span class="range-val" id="chip-entry-dur-val">350ms</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+  <h2>CSS Output</h2>
+  <div class="code-out" id="codeOut">/* click a chip */</div>
+  <div class="btn-row" style="margin-top:6px;">
+    <button class="btn btn-secondary" id="copyCSS">Copy CSS</button>
+  </div>
+</div>
+
+<div class="preview-area">
+  <div class="presets-bar">
+    <button class="preset-btn" id="presetApertura">🎬 Apertura</button>
+    <button class="preset-btn" id="presetFromTop">⬇️ From the top</button>
+  </div>
+  <div class="phone" id="phone">
+    <div class="notch"></div>
+    <div class="statusbar">
+      <span>4:02</span>
+      <span style="font-size:12px;">&#9679;&#9679;&#9679;</span>
+    </div>
+    <div class="screen">
+      <!-- STEP 1 -->
+      <div class="step1">
+        <div class="tabs" id="tabsBar">
+          <div class="tab" data-tab="todos">Todos</div>
+          <div class="tab on" data-tab="deportes">&#9917; Deportes</div>
+          <div class="tab" data-tab="entretenimiento">&#127908; Entretenimiento</div>
+        </div>
+        <div class="chips" id="chips">
+          <div class="chip" data-sport="Baloncesto" data-icon="&#127936;" data-teams="L,C,G" data-league="NBA">&#127936; Baloncesto</div>
+          <div class="chip" data-sport="Beisbol" data-icon="&#9918;" data-teams="M,M,M" data-league="MLB">&#9918; Beisbol</div>
+          <div class="chip" data-sport="Futbol" data-icon="&#9917;" data-teams="R,B,A" data-league="FIFA">&#9917; Futbol</div>
+          <div class="chip" data-sport="Tenis" data-icon="&#127934;" data-teams="N,D,A" data-league="ATP">&#127934; Tenis</div>
+          <div class="chip" data-sport="Softball" data-icon="&#129358;" data-teams="S,P,T" data-league="WSL">&#129358; Softball</div>
+          <div class="chip" data-sport="Padel" data-icon="&#127992;" data-teams="W,P,B" data-league="WPT">&#127992; Padel</div>
+        </div>
+        <div class="hero" id="hero">
+          <div class="hero-text">
+            <h3 id="heroTitle">Deportes en vivo</h3>
+            <p id="heroSub">Sigue tus deportes favoritos</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2 -->
+      <div class="step2">
+        <div class="detail-nav">
+          <button class="back" id="backBtn">&#8249; Deportes</button>
+          <div class="detail-tag" id="detailTag">&#9918; Beisbol</div>
+        </div>
+        <div class="logos" id="logos">
+          <div class="logo-circle">M</div>
+          <div class="logo-circle">M</div>
+          <div class="logo-circle">M</div>
+        </div>
+        <div class="detail-hero">
+          <div class="detail-hero-inner" id="leagueText">MLB</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const phone = document.getElementById('phone');
+  const $ = s => document.getElementById(s);
+
+  // ── Level panel switching ──
+  $('levelSelect').addEventListener('change', e => {
+    document.querySelectorAll('.level-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel-' + e.target.value).classList.add('active');
+  });
+
+  // ── Toggle buttons (Individual/Grupo) ──
+  document.querySelectorAll('.toggle-row').forEach(row => {
+    row.querySelectorAll('.toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        row.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('on'));
+        btn.classList.add('on');
+        applyVars();
+      });
+    });
+  });
+
+  // ── All selects and ranges call applyVars ──
+  document.querySelectorAll('.controls select, .controls input[type="range"]').forEach(el => {
+    el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', applyVars);
+  });
+
+  // ── Read all controls and push CSS vars ──
+  // Map: animation name → no-fade variant (NF). fadeOut/fadeIn have no NF variant (fade IS the animation)
+  const nfMap = {
+    exitLeft: 'exitLeftNF', exitRight: 'exitRightNF', exitUp: 'exitUpNF',
+    exitDown: 'exitDownNF', scaleOut: 'scaleOutNF',
+    enterRight: 'enterRightNF', enterLeft: 'enterLeftNF', enterUp: 'enterUpNF',
+    enterDown: 'enterDownNF', scaleIn: 'scaleInNF', popIn: 'popInNF', bounceIn: 'bounceInNF'
+  };
+
+  function resolveAnim(animId, fadeId) {
+    const anim = document.getElementById(animId)?.value;
+    const fade = document.querySelector('#' + fadeId + ' .toggle-btn.on')?.dataset.val || 'fade';
+    if (fade === 'nofade' && nfMap[anim]) return nfMap[anim];
+    return anim;
+  }
+
+  function applyVars() {
+    const v = (id) => document.getElementById(id)?.value;
+    const mode = (id) => document.querySelector('#' + id + ' .toggle-btn.on')?.dataset.val || 'group';
+
+    // Tab vars
+    phone.style.setProperty('--tab-exit-anim', resolveAnim('tab-exit-type', 'tab-exit-fade'));
+    phone.style.setProperty('--tab-exit-dur', v('tab-exit-dur') + 'ms');
+    phone.style.setProperty('--tab-exit-ease', v('tab-exit-ease'));
+    phone.style.setProperty('--tab-entry-anim', resolveAnim('tab-entry-type', 'tab-entry-fade'));
+    phone.style.setProperty('--tab-entry-dur', v('tab-entry-dur') + 'ms');
+    phone.style.setProperty('--tab-entry-ease', v('tab-entry-ease'));
+    phone.style.setProperty('--tab-stag', v('tab-stag') + 'ms');
+    phone.style.setProperty('--tab-entry-stag', v('tab-entry-stag') + 'ms');
+
+    // Chip vars
+    phone.style.setProperty('--chip-exit-anim', resolveAnim('chip-exit-type', 'chip-exit-fade'));
+    phone.style.setProperty('--chip-exit-dur', v('chip-exit-dur') + 'ms');
+    phone.style.setProperty('--chip-exit-ease', v('chip-exit-ease'));
+    phone.style.setProperty('--chip-entry-anim', resolveAnim('chip-entry-type', 'chip-entry-fade'));
+    phone.style.setProperty('--chip-entry-dur', v('chip-entry-dur') + 'ms');
+    phone.style.setProperty('--chip-entry-ease', v('chip-entry-ease'));
+    phone.style.setProperty('--chip-stag', v('chip-stag') + 'ms');
+    phone.style.setProperty('--chip-entry-stag', v('chip-entry-stag') + 'ms');
+
+    // Mode classes (separate exit/entry)
+    phone.classList.toggle('tabs-exit-individual', mode('tab-exit-mode') === 'individual');
+    phone.classList.toggle('tabs-entry-individual', mode('tab-entry-mode') === 'individual');
+    phone.classList.toggle('chips-exit-individual', mode('chip-exit-mode') === 'individual');
+    phone.classList.toggle('chips-entry-individual', mode('chip-entry-mode') === 'individual');
+
+    // Stagger row visibility (hide when group mode)
+    document.getElementById('tab-exit-stagger-row').classList.toggle('hidden', mode('tab-exit-mode') !== 'individual');
+    document.getElementById('tab-entry-stagger-row').classList.toggle('hidden', mode('tab-entry-mode') !== 'individual');
+    document.getElementById('chip-exit-stagger-row').classList.toggle('hidden', mode('chip-exit-mode') !== 'individual');
+    document.getElementById('chip-entry-stagger-row').classList.toggle('hidden', mode('chip-entry-mode') !== 'individual');
+
+    // Fade toggle visibility (hide when animation is pure fade — no transform to keep)
+    document.getElementById('tab-exit-fade-row').classList.toggle('hidden', v('tab-exit-type') === 'fadeOut');
+    document.getElementById('tab-entry-fade-row').classList.toggle('hidden', v('tab-entry-type') === 'fadeIn');
+    document.getElementById('chip-exit-fade-row').classList.toggle('hidden', v('chip-exit-type') === 'fadeOut');
+    document.getElementById('chip-entry-fade-row').classList.toggle('hidden', v('chip-entry-type') === 'fadeIn');
+
+    // Update value labels
+    $('tab-stag-val').textContent = v('tab-stag') + 'ms';
+    $('tab-entry-stag-val').textContent = v('tab-entry-stag') + 'ms';
+    $('tab-exit-dur-val').textContent = v('tab-exit-dur') + 'ms';
+    $('tab-entry-dur-val').textContent = v('tab-entry-dur') + 'ms';
+    $('chip-stag-val').textContent = v('chip-stag') + 'ms';
+    $('chip-entry-stag-val').textContent = v('chip-entry-stag') + 'ms';
+    $('chip-exit-dur-val').textContent = v('chip-exit-dur') + 'ms';
+    $('chip-entry-dur-val').textContent = v('chip-entry-dur') + 'ms';
+
+    updateCode();
+  }
+
+  // ── Go to step 2 ──
+  let isAnimating = false;
+
+  function goToStep2(chip) {
+    if (isAnimating) return;
+    isAnimating = true;
+
+    // Update step 2 content
+    $('detailTag').textContent = chip.dataset.icon + ' ' + chip.dataset.sport;
+    document.querySelectorAll('#logos .logo-circle').forEach((l, i) => l.textContent = chip.dataset.teams.split(',')[i] || '?');
+    $('leagueText').textContent = chip.dataset.league;
+
+    // Phase 1: exit animations
+    phone.classList.remove('back-to-1', 'at-step2');
+    void phone.offsetHeight;
+    phone.classList.add('tabs-exiting', 'chips-exiting');
+
+    // Calculate exit time (longest)
+    const tabDur = parseInt($('tab-exit-dur').value) || 300;
+    const tabStag = parseInt($('tab-stag').value) || 30;
+    const tabCount = document.querySelectorAll('.tabs .tab').length;
+    const tabIndiv = document.querySelector('#tab-exit-mode .toggle-btn.on')?.dataset.val === 'individual';
+    const tabTime = tabIndiv ? tabDur + tabStag * (tabCount - 1) : tabDur;
+
+    const chipDur = parseInt($('chip-exit-dur').value) || 300;
+    const chipStag = parseInt($('chip-stag').value) || 40;
+    const chipCount = document.querySelectorAll('#chips .chip').length;
+    const chipIndiv = document.querySelector('#chip-exit-mode .toggle-btn.on')?.dataset.val === 'individual';
+    const chipTime = chipIndiv ? chipDur + chipStag * (chipCount - 1) : chipDur;
+
+    const exitTime = Math.max(tabTime, chipTime);
+
+    // Phase 2: switch to step 2
+    setTimeout(() => {
+      phone.classList.remove('tabs-exiting', 'chips-exiting');
+      phone.classList.add('at-step2');
+      isAnimating = false;
+    }, exitTime);
+  }
+
+  // ── Go back to step 1 ──
+  function goToStep1() {
+    if (isAnimating) return;
+    isAnimating = true;
+
+    // Phase 1: exit step 2 elements
+    phone.classList.remove('back-to-1', 'step2-exiting');
+    void phone.offsetHeight;
+    phone.classList.add('step2-exiting');
+
+    // Calculate exit time
+    const dur = parseInt($('tab-exit-dur').value) || 300;
+    const stag = parseInt($('tab-stag').value) || 120;
+    const indiv = document.querySelector('#tab-exit-mode .toggle-btn.on')?.dataset.val === 'individual';
+    // back + tag + logos + hero = 4 items in individual mode
+    const exitTime = indiv ? dur + stag * 3 : dur;
+
+    // Phase 2: switch to step 1 + entry animations
+    setTimeout(() => {
+      phone.classList.remove('at-step2', 'step2-exiting');
+      void phone.offsetHeight;
+      phone.classList.add('back-to-1');
+      isAnimating = false;
+    }, exitTime);
+  }
+
+  // ── Events ──
+  $('chips').addEventListener('click', e => {
+    const chip = e.target.closest('.chip');
+    if (chip) goToStep2(chip);
+  });
+  $('backBtn').addEventListener('click', goToStep1);
+
+  // ── Tab categories data ──
+  const TAB_DATA = {
+    deportes: {
+      chips: [
+        { sport: 'Baloncesto', icon: '🏀', teams: 'L,C,G', league: 'NBA' },
+        { sport: 'Beisbol', icon: '⚾', teams: 'M,M,M', league: 'MLB' },
+        { sport: 'Futbol', icon: '⚽', teams: 'R,B,A', league: 'FIFA' },
+        { sport: 'Tenis', icon: '🎾', teams: 'N,D,A', league: 'ATP' },
+        { sport: 'Softball', icon: '🥎', teams: 'S,P,T', league: 'WSL' },
+        { sport: 'Padel', icon: '🏸', teams: 'W,P,B', league: 'WPT' },
+      ],
+      heroTitle: 'Deportes en vivo',
+      heroSub: 'Sigue tus deportes favoritos',
+      backLabel: 'Deportes'
+    },
+    entretenimiento: {
+      chips: [
+        { sport: 'Shows', icon: '🎤', teams: 'S,L,V', league: 'LIVE' },
+        { sport: 'Conciertos', icon: '🎶', teams: 'R,P,F', league: 'TOUR' },
+        { sport: 'Festivales', icon: '🎪', teams: 'L,C,B', league: 'FEST' },
+        { sport: 'Recitales', icon: '🎸', teams: 'A,R,M', league: 'REC' },
+        { sport: 'Teatro', icon: '🎭', teams: 'B,N,O', league: 'STAGE' },
+      ],
+      heroTitle: 'Entretenimiento',
+      heroSub: 'Descubrí los mejores eventos',
+      backLabel: 'Entretenimiento'
+    },
+    todos: {
+      chips: [
+        { sport: 'Baloncesto', icon: '🏀', teams: 'L,C,G', league: 'NBA' },
+        { sport: 'Futbol', icon: '⚽', teams: 'R,B,A', league: 'FIFA' },
+        { sport: 'Shows', icon: '🎤', teams: 'S,L,V', league: 'LIVE' },
+        { sport: 'Conciertos', icon: '🎶', teams: 'R,P,F', league: 'TOUR' },
+        { sport: 'Tenis', icon: '🎾', teams: 'N,D,A', league: 'ATP' },
+        { sport: 'Teatro', icon: '🎭', teams: 'B,N,O', league: 'STAGE' },
+      ],
+      heroTitle: 'Todo en vivo',
+      heroSub: 'Deportes y entretenimiento',
+      backLabel: 'Todos'
+    }
+  };
+
+  let activeTab = 'deportes';
+
+  function switchTab(tabName) {
+    if (isAnimating || tabName === activeTab) return;
+    if (phone.classList.contains('at-step2')) return;
+    const data = TAB_DATA[tabName];
+    if (!data) return;
+
+    isAnimating = true;
+    activeTab = tabName;
+
+    // Phase 1: Exit — animate both tabs (Nivel 1) and chips (Nivel 2) out
+    phone.classList.remove('back-to-1');
+    void phone.offsetHeight;
+    phone.classList.add('tabs-exiting', 'chips-exiting');
+
+    // Calculate exit time (longest of both levels)
+    const tabDur = parseInt($('tab-exit-dur').value) || 300;
+    const tabStag = parseInt($('tab-stag').value) || 30;
+    const tabCount = document.querySelectorAll('#tabsBar .tab').length;
+    const tabIndiv = document.querySelector('#tab-exit-mode .toggle-btn.on')?.dataset.val === 'individual';
+    const tabTime = tabIndiv ? tabDur + tabStag * (tabCount - 1) : tabDur;
+
+    const chipDur = parseInt($('chip-exit-dur').value) || 300;
+    const chipStag = parseInt($('chip-stag').value) || 40;
+    const chipCount = document.querySelectorAll('#chips .chip').length;
+    const chipIndiv = document.querySelector('#chip-exit-mode .toggle-btn.on')?.dataset.val === 'individual';
+    const chipTime = chipIndiv ? chipDur + chipStag * (chipCount - 1) : chipDur;
+
+    const exitTime = Math.max(tabTime, chipTime);
+
+    // Phase 2: Swap content + animate both back in
+    setTimeout(() => {
+      // Update active tab style
+      document.querySelectorAll('#tabsBar .tab').forEach(t => t.classList.toggle('on', t.dataset.tab === tabName));
+
+      // Swap chip content
+      $('chips').innerHTML = data.chips.map(c =>
+        `<div class="chip" data-sport="${c.sport}" data-icon="${c.icon}" data-teams="${c.teams}" data-league="${c.league}">${c.icon} ${c.sport}</div>`
+      ).join('');
+
+      // Update hero
+      $('heroTitle').textContent = data.heroTitle;
+      $('heroSub').textContent = data.heroSub;
+
+      // Entry animations for both levels
+      phone.classList.remove('tabs-exiting', 'chips-exiting');
+      void phone.offsetHeight;
+      phone.classList.add('back-to-1');
+
+      // Calculate entry time (longest of both levels)
+      const tabEntryDur = parseInt($('tab-entry-dur').value) || 300;
+      const tabEntryStag = parseInt($('tab-entry-stag').value) || 80;
+      const tabEntryIndiv = document.querySelector('#tab-entry-mode .toggle-btn.on')?.dataset.val === 'individual';
+      const tabEntryTime = tabEntryIndiv ? tabEntryDur + tabEntryStag * (tabCount - 1) : tabEntryDur;
+
+      const chipEntryDur = parseInt($('chip-entry-dur').value) || 300;
+      const chipEntryStag = parseInt($('chip-entry-stag').value) || 40;
+      const newChipCount = data.chips.length;
+      const chipEntryIndiv = document.querySelector('#chip-entry-mode .toggle-btn.on')?.dataset.val === 'individual';
+      const chipEntryTime = chipEntryIndiv ? chipEntryDur + chipEntryStag * (newChipCount - 1) : chipEntryDur;
+
+      const entryTime = Math.max(tabEntryTime, chipEntryTime);
+
+      setTimeout(() => {
+        phone.classList.remove('back-to-1');
+        isAnimating = false;
+      }, entryTime);
+    }, exitTime);
+  }
+
+  $('tabsBar').addEventListener('click', e => {
+    const tab = e.target.closest('.tab');
+    if (tab) switchTab(tab.dataset.tab);
+  });
+
+  // ── Update back button label based on active tab ──
+  const origGoToStep2 = goToStep2;
+  goToStep2 = function(chip) {
+    $('backBtn').textContent = '‹ ' + TAB_DATA[activeTab].backLabel;
+    origGoToStep2(chip);
+  };
+
+  // ── Code output ──
+  // Keyframe definitions lookup
+  const KEYFRAMES = {
+    exitLeft:     '@keyframes exitLeft {\n  from { transform: translateX(0); opacity: 1; }\n  to   { transform: translateX(-100%); opacity: 0; }\n}',
+    exitRight:    '@keyframes exitRight {\n  from { transform: translateX(0); opacity: 1; }\n  to   { transform: translateX(100%); opacity: 0; }\n}',
+    exitUp:       '@keyframes exitUp {\n  from { transform: translateY(0); opacity: 1; }\n  to   { transform: translateY(-100%); opacity: 0; }\n}',
+    exitDown:     '@keyframes exitDown {\n  from { transform: translateY(0); opacity: 1; }\n  to   { transform: translateY(100%); opacity: 0; }\n}',
+    scaleOut:     '@keyframes scaleOut {\n  from { transform: scale(1); opacity: 1; }\n  to   { transform: scale(0.7); opacity: 0; }\n}',
+    fadeOut:      '@keyframes fadeOut {\n  from { opacity: 1; }\n  to   { opacity: 0; }\n}',
+    exitLeftNF:   '@keyframes exitLeftNF {\n  from { transform: translateX(0); }\n  to   { transform: translateX(-100%); }\n}',
+    exitRightNF:  '@keyframes exitRightNF {\n  from { transform: translateX(0); }\n  to   { transform: translateX(100%); }\n}',
+    exitUpNF:     '@keyframes exitUpNF {\n  from { transform: translateY(0); }\n  to   { transform: translateY(-100%); }\n}',
+    exitDownNF:   '@keyframes exitDownNF {\n  from { transform: translateY(0); }\n  to   { transform: translateY(100%); }\n}',
+    scaleOutNF:   '@keyframes scaleOutNF {\n  from { transform: scale(1); }\n  to   { transform: scale(0.7); }\n}',
+    enterRight:   '@keyframes enterRight {\n  from { transform: translateX(100%); opacity: 0; }\n  to   { transform: translateX(0); opacity: 1; }\n}',
+    enterLeft:    '@keyframes enterLeft {\n  from { transform: translateX(-100%); opacity: 0; }\n  to   { transform: translateX(0); opacity: 1; }\n}',
+    enterUp:      '@keyframes enterUp {\n  from { transform: translateY(100%); opacity: 0; }\n  to   { transform: translateY(0); opacity: 1; }\n}',
+    enterDown:    '@keyframes enterDown {\n  from { transform: translateY(-100%); opacity: 0; }\n  to   { transform: translateY(0); opacity: 1; }\n}',
+    fadeIn:       '@keyframes fadeIn {\n  from { opacity: 0; }\n  to   { opacity: 1; }\n}',
+    scaleIn:      '@keyframes scaleIn {\n  from { transform: scale(0.8); opacity: 0; }\n  to   { transform: scale(1); opacity: 1; }\n}',
+    popIn:        '@keyframes popIn {\n  0%  { transform: scale(0.5); opacity: 0; }\n  70% { transform: scale(1.08); opacity: 1; }\n  100%{ transform: scale(1); }\n}',
+    bounceIn:     '@keyframes bounceIn {\n  0%  { transform: translateY(60px) scale(0.9); opacity: 0; }\n  60% { transform: translateY(-8px) scale(1.02); opacity: 1; }\n  100%{ transform: translateY(0) scale(1); }\n}',
+    enterRightNF: '@keyframes enterRightNF {\n  from { transform: translateX(100%); }\n  to   { transform: translateX(0); }\n}',
+    enterLeftNF:  '@keyframes enterLeftNF {\n  from { transform: translateX(-100%); }\n  to   { transform: translateX(0); }\n}',
+    enterUpNF:    '@keyframes enterUpNF {\n  from { transform: translateY(100%); }\n  to   { transform: translateY(0); }\n}',
+    enterDownNF:  '@keyframes enterDownNF {\n  from { transform: translateY(-100%); }\n  to   { transform: translateY(0); }\n}',
+    scaleInNF:    '@keyframes scaleInNF {\n  from { transform: scale(0.8); }\n  to   { transform: scale(1); }\n}',
+    popInNF:      '@keyframes popInNF {\n  0%  { transform: scale(0.5); }\n  70% { transform: scale(1.08); }\n  100%{ transform: scale(1); }\n}',
+    bounceInNF:   '@keyframes bounceInNF {\n  0%  { transform: translateY(60px) scale(0.9); }\n  60% { transform: translateY(-8px) scale(1.02); }\n  100%{ transform: translateY(0) scale(1); }\n}',
+  };
+
+  function resolveAnimName(typeId, fadeId) {
+    const anim = $(typeId)?.value;
+    const fade = document.querySelector('#' + fadeId + ' .toggle-btn.on')?.dataset.val || 'fade';
+    if (fade === 'nofade' && nfMap[anim]) return nfMap[anim];
+    return anim;
+  }
+
+  function getLevelCSS(prefix, name) {
+    const exitAnim = resolveAnimName(prefix + '-exit-type', prefix + '-exit-fade');
+    const exitDur = $(prefix + '-exit-dur').value;
+    const exitEase = $(prefix + '-exit-ease').value;
+    const exitMode = document.querySelector('#' + prefix + '-exit-mode .toggle-btn.on')?.dataset.val || 'group';
+    const exitStag = $(prefix + '-stag').value;
+
+    const entryAnim = resolveAnimName(prefix + '-entry-type', prefix + '-entry-fade');
+    const entryDur = $(prefix + '-entry-dur').value;
+    const entryEase = $(prefix + '-entry-ease').value;
+    const entryMode = document.querySelector('#' + prefix + '-entry-mode .toggle-btn.on')?.dataset.val || 'group';
+    const entryStag = $(prefix + '-entry-stag').value;
+
+    let css = `/* ═══ ${name} ═══ */\n\n`;
+
+    // Keyframes
+    const usedKeyframes = new Set([exitAnim, entryAnim]);
+    usedKeyframes.forEach(kf => {
+      if (KEYFRAMES[kf]) css += KEYFRAMES[kf] + '\n\n';
+    });
+
+    // Exit rules
+    if (exitMode === 'group') {
+      css += `.${prefix}-exit {\n  animation: ${exitAnim} ${exitDur}ms ${exitEase} forwards;\n}\n`;
+    } else {
+      css += `.${prefix}-exit {\n  animation: ${exitAnim} ${exitDur}ms ${exitEase} forwards;\n  animation-delay: calc(${exitStag}ms * var(--i, 0));\n}\n`;
+      css += `/* Asignar --i a cada hijo: */\n`;
+      for (let i = 0; i < 6; i++) {
+        css += `.${prefix}-exit:nth-child(${i + 1}) { --i: ${i}; }\n`;
+      }
+    }
+
+    css += '\n';
+
+    // Entry rules
+    if (entryMode === 'group') {
+      css += `.${prefix}-entry {\n  animation: ${entryAnim} ${entryDur}ms ${entryEase} backwards;\n}\n`;
+    } else {
+      css += `.${prefix}-entry {\n  animation: ${entryAnim} ${entryDur}ms ${entryEase} backwards;\n  animation-delay: calc(${entryStag}ms * var(--i, 0));\n}\n`;
+      css += `/* Asignar --i a cada hijo: */\n`;
+      for (let i = 0; i < 6; i++) {
+        css += `.${prefix}-entry:nth-child(${i + 1}) { --i: ${i}; }\n`;
+      }
+    }
+
+    return css;
+  }
+
+  function updateCode() {
+    const nivel1 = getLevelCSS('tab', 'Nivel 1 (Categorias)');
+    const nivel2 = getLevelCSS('chip', 'Nivel 2 (Subcategorias)');
+    $('codeOut').textContent = nivel1 + '\n' + nivel2;
+  }
+
+  $('copyCSS').addEventListener('click', () => {
+    navigator.clipboard.writeText($('codeOut').textContent);
+    $('copyCSS').textContent = '\u2713';
+    setTimeout(() => $('copyCSS').textContent = 'Copy CSS', 1200);
+  });
+
+  // ═══════════════════════════════════
+  // SAVE / SHARE CONFIG
+  // ═══════════════════════════════════
+
+  // All configurable control IDs in order
+  const configControls = {
+    // Selects (value)
+    selects: [
+      'tab-exit-type', 'tab-exit-ease', 'tab-entry-type', 'tab-entry-ease',
+      'chip-exit-type', 'chip-exit-ease', 'chip-entry-type', 'chip-entry-ease'
+    ],
+    // Ranges (value)
+    ranges: [
+      'tab-exit-dur', 'tab-entry-dur', 'tab-stag', 'tab-entry-stag',
+      'chip-exit-dur', 'chip-entry-dur', 'chip-stag', 'chip-entry-stag'
+    ],
+    // Toggle rows (active val: 'individual'|'group', 'fade'|'nofade')
+    toggles: [
+      'tab-exit-mode', 'tab-entry-mode', 'chip-exit-mode', 'chip-entry-mode',
+      'tab-exit-fade', 'tab-entry-fade', 'chip-exit-fade', 'chip-entry-fade'
+    ]
+  };
+
+  function getConfig() {
+    const cfg = {};
+    configControls.selects.forEach(id => { cfg[id] = $(id).value; });
+    configControls.ranges.forEach(id => { cfg[id] = $(id).value; });
+    configControls.toggles.forEach(id => {
+      const active = document.querySelector('#' + id + ' .toggle-btn.on');
+      cfg[id] = active ? active.dataset.val : '';
+    });
+    return cfg;
+  }
+
+  function setConfig(cfg) {
+    // Set selects
+    configControls.selects.forEach(id => {
+      if (cfg[id] !== undefined && $(id)) $(id).value = cfg[id];
+    });
+    // Set ranges
+    configControls.ranges.forEach(id => {
+      if (cfg[id] !== undefined && $(id)) $(id).value = cfg[id];
+    });
+    // Set toggles
+    configControls.toggles.forEach(id => {
+      if (cfg[id] !== undefined) {
+        const row = document.getElementById(id);
+        if (!row) return;
+        row.querySelectorAll('.toggle-btn').forEach(btn => {
+          btn.classList.toggle('on', btn.dataset.val === cfg[id]);
+        });
+      }
+    });
+    applyVars();
+  }
+
+
+  // ── Presets ──
+  const PRESETS = {
+    apertura: {
+      // Nivel 1 — Tabs
+      'tab-exit-type': 'exitLeft',
+      'tab-exit-fade': 'fade',
+      'tab-exit-mode': 'individual',
+      'tab-stag': '120',
+      'tab-exit-ease': 'ease-in-out',
+      'tab-exit-dur': '300',
+      'tab-entry-type': 'enterRight',
+      'tab-entry-fade': 'fade',
+      'tab-entry-mode': 'individual',
+      'tab-entry-stag': '120',
+      'tab-entry-ease': 'ease-in-out',
+      'tab-entry-dur': '300',
+      // Nivel 2 — Chips
+      'chip-exit-type': 'exitRight',
+      'chip-exit-fade': 'fade',
+      'chip-exit-mode': 'individual',
+      'chip-stag': '60',
+      'chip-exit-ease': 'ease-in-out',
+      'chip-exit-dur': '300',
+      'chip-entry-type': 'enterLeft',
+      'chip-entry-fade': 'fade',
+      'chip-entry-mode': 'individual',
+      'chip-entry-stag': '60',
+      'chip-entry-ease': 'ease-in-out',
+      'chip-entry-dur': '300',
+    },
+    fromTop: {
+      // Nivel 1 — Tabs
+      'tab-exit-type': 'exitUp',
+      'tab-exit-fade': 'fade',
+      'tab-exit-mode': 'individual',
+      'tab-stag': '120',
+      'tab-exit-ease': 'ease-in-out',
+      'tab-exit-dur': '250',
+      'tab-entry-type': 'enterDown',
+      'tab-entry-fade': 'fade',
+      'tab-entry-mode': 'individual',
+      'tab-entry-stag': '120',
+      'tab-entry-ease': 'ease-in-out',
+      'tab-entry-dur': '250',
+      // Nivel 2 — Chips
+      'chip-exit-type': 'fadeOut',
+      'chip-exit-fade': 'fade',
+      'chip-exit-mode': 'individual',
+      'chip-stag': '60',
+      'chip-exit-ease': 'ease-in-out',
+      'chip-exit-dur': '300',
+      'chip-entry-type': 'fadeIn',
+      'chip-entry-fade': 'fade',
+      'chip-entry-mode': 'individual',
+      'chip-entry-stag': '60',
+      'chip-entry-ease': 'ease-in-out',
+      'chip-entry-dur': '300',
+    }
+  };
+
+  function applyPreset(name) {
+    const cfg = PRESETS[name];
+    if (!cfg) return;
+    setConfig(cfg);
+    // Update range display values
+    configControls.ranges.forEach(id => {
+      const valSpan = $(id + '-val');
+      if (valSpan && $(id)) valSpan.textContent = $(id).value + 'ms';
+    });
+    // Visual feedback on button
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('preset' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
+  }
+
+  $('presetApertura').addEventListener('click', () => applyPreset('apertura'));
+  $('presetFromTop').addEventListener('click', () => applyPreset('fromTop'));
+
+  // Init
+  applyVars();
+</script>
+</body>
+</html>

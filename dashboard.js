@@ -24,6 +24,15 @@ const TOOLS = [
         path: 'tools/acreditation-manager/index.html',
         accentColor: '#2563eb',
     },
+    {
+        id: 'animation-mockup',
+        name: 'Animation Mockup',
+        subtitle: 'Transition Prototyper',
+        description: 'Prototipá y configurá animaciones de transición para apps con preview en tiempo real y exportación de CSS.',
+        icon: '🎬',
+        path: 'tools/animation-mockup/animation-mockup-v4.html',
+        accentColor: '#8b5cf6',
+    },
 ];
 
 function renderTools() {
