@@ -1065,7 +1065,7 @@ class GridManager {
   }
 
   generateCSVContent(gridData, sectionCode, config, rowOverrides) {
-    const header = "Section,Row,Seat";
+    const header = "rowNumber,sectionCode,seatCode";
     const rows = [header];
     const totalRows = config ? config.rows : this.rows;
 
@@ -1074,7 +1074,7 @@ class GridManager {
         const rowLabel = config
           ? this.getRowLabelWithConfig(cell.row, config, totalRows, rowOverrides)
           : this.getRowLabel(cell.row);
-        rows.push(`${sectionCode},${rowLabel},${cell.code}`);
+        rows.push(`${rowLabel},${sectionCode},${cell.code}`);
       }
     });
 
