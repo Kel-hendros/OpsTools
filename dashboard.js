@@ -33,6 +33,15 @@ const TOOLS = [
         path: 'tools/animation-mockup/animation-mockup-v4.html',
         accentColor: '#8b5cf6',
     },
+    {
+        id: 'commercial-proposal',
+        name: 'Propuesta Comercial',
+        subtitle: 'Commercial Proposal Builder',
+        description: 'Configurá los términos comerciales, financieros y logísticos para nuevos organizadores en Fanki.',
+        icon: '📋',
+        path: 'tools/commercial-proposal/index.html',
+        accentColor: '#f59e0b',
+    },
 ];
 
 function renderTools() {
