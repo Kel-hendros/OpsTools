@@ -1070,11 +1070,13 @@ class GridManager {
     const totalRows = config ? config.rows : this.rows;
 
     gridData.forEach((cell) => {
+      const rowLabel = config
+        ? this.getRowLabelWithConfig(cell.row, config, totalRows, rowOverrides)
+        : this.getRowLabel(cell.row);
       if (cell.type === "seat") {
-        const rowLabel = config
-          ? this.getRowLabelWithConfig(cell.row, config, totalRows, rowOverrides)
-          : this.getRowLabel(cell.row);
         rows.push(`${rowLabel},${sectionCode},${cell.code}`);
+      } else {
+        rows.push(`${rowLabel},${sectionCode},NOT_SEAT`);
       }
     });
 
@@ -1111,8 +1113,7 @@ class GridManager {
 
       if (!cached) return;
 
-      const hasSeats = cached.gridData.some((c) => c.type === "seat");
-      if (!hasSeats) return;
+      if (!cached.gridData || cached.gridData.length === 0) return;
 
       const csv = this.generateCSVContent(
         cached.gridData,

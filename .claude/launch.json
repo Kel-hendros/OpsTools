@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ops-tools",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-l", "8000"],
+      "port": 8000
+    }
+  ]
+}
