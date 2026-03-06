@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Visualizer 2.0 — Ops Tools</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1" integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ" crossorigin="anonymous"></script>
+    <style>
+        :root {
+            --bg: #0e1117;
+            --surface: #161b22;
+            --surface-raised: #1c2333;
+            --border: rgba(255,255,255,0.08);
+            --border-hover: rgba(255,255,255,0.18);
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --accent: #6C3CE1;
+            --accent-dim: rgba(108,60,225,0.15);
+            --font-main: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 14px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: var(--font-main); background: var(--bg); color: var(--text-primary); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+
+        /* --- App Header --- */
+        .app-header { display: flex; align-items: center; justify-content: space-between; height: 60px; padding: 0 1.5rem; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; backdrop-filter: blur(12px); }
+        .header-logo { display: flex; align-items: center; gap: 0.75rem; }
+        .back-home { font-size: 0.78rem; font-weight: 500; color: var(--text-secondary); text-decoration: none; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.3rem 0.65rem; transition: all 0.12s ease; white-space: nowrap; }
+        .back-home:hover { border-color: var(--border-hover); color: var(--text-primary); background: var(--surface-raised); }
+        .header-logo .logo-icon { font-size: 1.5rem; }
+        .header-logo h1 { font-size: 1.05rem; font-weight: 600; }
+        .header-logo .tagline { font-weight: 300; color: var(--text-secondary); font-size: 0.85rem; }
+
+        /* --- Dashboard --- */
+        .dashboard { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .dashboard-header { background: linear-gradient(135deg, #6C3CE1 0%, #4A1DB2 100%); color: white; padding: 24px 32px; border-radius: var(--radius-lg); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+        .dashboard-header h2 { font-size: 20px; font-weight: 700; }
+        .dashboard-header .subtitle { font-size: 14px; opacity: 0.8; margin-top: 4px; }
+        .filters { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+        .filters select { padding: 8px 14px; border-radius: 8px; border: none; font-size: 14px; background: rgba(255,255,255,0.15); color: white; cursor: pointer; min-width: 160px; }
+        .filters select option { color: #333; background: white; }
+        .filters label { font-size: 13px; opacity: 0.85; }
+
+        /* --- KPIs --- */
+        .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
+        .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 20px 24px; }
+        .kpi .value { font-size: 32px; font-weight: 700; color: var(--accent); }
+        .kpi .label { font-size: 13px; color: var(--text-secondary); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .kpi .detail { font-size: 12px; color: var(--text-secondary); margin-top: 2px; opacity: 0.7; }
+
+        /* --- Charts --- */
+        .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+        .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 20px; }
+        .chart-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: var(--text-primary); }
+
+        /* --- Table --- */
+        .table-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 20px; margin-bottom: 20px; }
+        .table-section h3 { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: var(--text-primary); }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { background: var(--surface-raised); padding: 10px 12px; text-align: left; font-weight: 600; color: var(--text-secondary); cursor: pointer; user-select: none; border-bottom: 2px solid var(--border); white-space: nowrap; }
+        th:hover { background: rgba(255,255,255,0.06); }
+        th.sorted-asc::after { content: ' \25B2'; font-size: 10px; }
+        th.sorted-desc::after { content: ' \25BC'; font-size: 10px; }
+        td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text-primary); }
+        tr:hover { background: rgba(255,255,255,0.03); }
+
+        /* --- Badges --- */
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .badge-soldout { background: rgba(239,68,68,0.15); color: #f87171; }
+        .badge-available { background: rgba(16,185,129,0.15); color: #34d399; }
+        .badge-queue { background: rgba(245,158,11,0.15); color: #fbbf24; }
+        .badge-catalog { background: rgba(59,130,246,0.15); color: #60a5fa; }
+        .badge-hidden { background: rgba(255,255,255,0.06); color: var(--text-secondary); }
+
+        .footer { text-align: center; padding: 16px; font-size: 12px; color: var(--text-secondary); }
+        @media (max-width: 768px) {
+            .charts { grid-template-columns: 1fr; }
+            .dashboard-header { flex-direction: column; align-items: flex-start; }
+        }
+        .team-img { width: 20px; height: 20px; border-radius: 50%; vertical-align: middle; margin-right: 6px; object-fit: contain; }
+
+        /* --- Team Chips --- */
+        .chips-section { margin-bottom: 20px; }
+        .chips-section .chips-label { font-size: 13px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+        .chips-container { display: flex; flex-wrap: wrap; gap: 8px; }
+        .chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 100px; font-size: 13px; font-weight: 500; border: 1px solid var(--border); background: var(--surface); color: var(--text-secondary); cursor: pointer; transition: all 0.15s ease; user-select: none; }
+        .chip:hover { border-color: var(--border-hover); color: var(--text-primary); background: var(--surface-raised); }
+        .chip.active { background: var(--accent-dim); border-color: var(--accent); color: #c4b5fd; }
+        .chip .chip-img { width: 18px; height: 18px; border-radius: 50%; object-fit: contain; }
+        .chip .chip-count { font-size: 11px; opacity: 0.6; }
+        .chip-clear { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 100px; font-size: 12px; font-weight: 500; border: 1px dashed var(--border); background: transparent; color: var(--text-secondary); cursor: pointer; transition: all 0.15s ease; }
+        .chip-clear:hover { border-color: rgba(239,68,68,0.4); color: #f87171; background: rgba(239,68,68,0.08); }
+
+        /* --- Country Selector --- */
+        .country-selector select { padding: 8px 14px; border-radius: 8px; border: none; font-size: 15px; font-weight: 600; background: rgba(255,255,255,0.15); color: white; cursor: pointer; min-width: 180px; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='white' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6.5 6.5-6.5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+        .country-selector select option { color: #333; background: white; font-weight: 500; }
+
+        /* --- Loading overlay --- */
+        .loading-overlay { position: fixed; top: 60px; left: 0; right: 0; bottom: 0; background: rgba(14,17,23,0.85); display: flex; align-items: center; justify-content: center; z-index: 200; backdrop-filter: blur(4px); }
+        .loading-spinner { text-align: center; color: var(--text-secondary); }
+        .loading-spinner .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-spinner p { font-size: 14px; }
+    </style>
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-logo">
+            <a href="../../index.html" class="back-home" title="Volver a Ops Tools">&larr; Ops Tools</a>
+            <span class="logo-icon">📊</span>
+            <h1>Event Visualizer 2.0 <span class="tagline">— Dashboard de Eventos</span></h1>
+        </div>
+    </header>
+<div class="dashboard">
+    <div id="loadingOverlay" class="loading-overlay" style="display:none">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Cargando eventos...</p>
+        </div>
+    </div>
+
+    <div class="dashboard-header">
+        <div>
+            <div class="country-selector">
+                <h2>Fanki - Eventos</h2>
+                <select id="countrySelect" onchange="switchCountry(this.value)">
+                    <option value="MEX">🇲🇽 México</option>
+                    <option value="COL">🇨🇴 Colombia</option>
+                </select>
+            </div>
+            <div class="subtitle">Dashboard de eventos activos · Datos en vivo desde fanki.com.mx</div>
+        </div>
+        <div class="filters">
+            <div>
+                <label>Categoría</label><br>
+                <select id="filterCategory" onchange="applyFilters()">
+                    <option value="">Todas las categorías</option>
+                </select>
+            </div>
+            <div>
+                <label>Estado</label><br>
+                <select id="filterStatus" onchange="applyFilters()">
+                    <option value="">Todos</option>
+                    <option value="available">Disponible</option>
+                    <option value="soldout">Agotado</option>
+                    <option value="catalog">En catálogo</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <section class="chips-section">
+        <div class="chips-label">Equipo Local</div>
+        <div class="chips-container" id="teamChips"></div>
+    </section>
+
+    <section class="kpis">
+        <div class="kpi"><div class="value" id="kpiTotal">-</div><div class="label">Total Eventos</div><div class="detail" id="kpiTotalDetail"></div></div>
+        <div class="kpi"><div class="value" id="kpiCatalog">-</div><div class="label">En Catálogo</div><div class="detail" id="kpiCatalogDetail"></div></div>
+        <div class="kpi"><div class="value" id="kpiSoldOut">-</div><div class="label">Agotados</div><div class="detail" id="kpiSoldOutDetail"></div></div>
+        <div class="kpi"><div class="value" id="kpiTeams">-</div><div class="label">Equipos Locales</div><div class="detail" id="kpiTeamsDetail"></div></div>
+        <div class="kpi"><div class="value" id="kpiNext">-</div><div class="label">Próximo Evento</div><div class="detail" id="kpiNextDetail"></div></div>
+    </section>
+
+    <section class="charts">
+        <div class="chart-card">
+            <h3>Eventos por Equipo Local</h3>
+            <canvas id="chartTeams"></canvas>
+        </div>
+        <div class="chart-card">
+            <h3>Eventos por Categoría</h3>
+            <canvas id="chartCategories"></canvas>
+        </div>
+        <div class="chart-card">
+            <h3>Eventos por Mes</h3>
+            <canvas id="chartTimeline"></canvas>
+        </div>
+        <div class="chart-card">
+            <h3>Disponibilidad</h3>
+            <canvas id="chartAvailability"></canvas>
+        </div>
+    </section>
+
+    <section class="table-section">
+        <h3>Detalle de Eventos (<span id="tableCount">0</span>)</h3>
+        <div style="overflow-x:auto;">
+        <table id="eventsTable">
+            <thead>
+                <tr>
+                    <th data-col="date" onclick="sortTable('date')">Fecha</th>
+                    <th data-col="name" onclick="sortTable('name')">Evento</th>
+                    <th data-col="homeTeam" onclick="sortTable('homeTeam')">Equipo Local</th>
+                    <th data-col="awayTeam" onclick="sortTable('awayTeam')">Visitante</th>
+                    <th data-col="category" onclick="sortTable('category')">Categoría</th>
+                    <th data-col="venue" onclick="sortTable('venue')">Sede</th>
+                    <th data-col="city" onclick="sortTable('city')">Ciudad</th>
+                    <th data-col="status" onclick="sortTable('status')">Estado</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        </div>
+    </section>
+
+    <div class="footer">
+        Generado el {{ new Date().toLocaleDateString('es-MX') }} · Fuente: fanki.com.mx/api/events/categorized?country=MEX
+    </div>
+</div>
+
+<script>
+// Dark theme defaults for Chart.js
+Chart.defaults.color = '#8b949e';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.08)';
+Chart.defaults.plugins.legend.labels.color = '#8b949e';
+
+let DATA = [];
+let currentCountry = 'MEX';
+
+const COUNTRIES = {
+    MEX: { code: 'MEX', name: 'México', flag: '🇲🇽', locale: 'es-MX' },
+    COL: { code: 'COL', name: 'Colombia', flag: '🇨🇴', locale: 'es-CO' },
+};
+
+const API_BASE = 'https://fanki.com.mx/api/events/categorized?country=';
+
+function flattenApiResponse(categories) {
+    const events = [];
+    for (const cat of categories) {
+        for (const e of (cat.events || [])) {
+            events.push({
+                id: e.id,
+                code: e.code,
+                name: e.name,
+                type: e.type,
+                category: cat.name,
+                catCode: cat.code,
+                dateUtc: e.dateUtc,
+                date: e.date,
+                soldOut: e.soldOut,
+                showInCatalog: e.showInCatalog,
+                featured: e.featured,
+                homeTeam: e.homeTeam ? e.homeTeam.name : null,
+                homeTeamImg: e.homeTeam ? e.homeTeam.image : null,
+                awayTeam: e.awayTeam ? (typeof e.awayTeam === 'string' ? e.awayTeam : e.awayTeam.name) : null,
+                awayTeamImg: e.awayTeam && typeof e.awayTeam === 'object' ? e.awayTeam.image : null,
+                venue: e.venue ? e.venue.name : '',
+                city: e.venue ? (e.venue.city || e.venue.state || '') : '',
+                state: e.venue ? (e.venue.state || '') : '',
+                capacity: e.venue ? (e.venue.capacity || 0) : 0,
+                enableQueue: e.enableQueue || false,
+            });
+        }
+    }
+    return events;
+}
+
+async function fetchEvents(countryCode) {
+    const overlay = document.getElementById('loadingOverlay');
+    overlay.style.display = 'flex';
+    try {
+        const resp = await fetch(API_BASE + countryCode);
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const categories = await resp.json();
+        DATA = flattenApiResponse(categories);
+    } catch (err) {
+        console.error('Error cargando eventos:', err);
+        DATA = [];
+    } finally {
+        overlay.style.display = 'none';
+    }
+}
+
+async function switchCountry(code) {
+    currentCountry = code;
+    const country = COUNTRIES[code];
+    // Reset filters
+    selectedTeams.clear();
+    document.getElementById('filterCategory').value = '';
+    document.getElementById('filterStatus').value = '';
+    // Fetch new data
+    await fetchEvents(code);
+    // Update footer
+    document.querySelector('.footer').innerHTML = 'Generado el ' + new Date().toLocaleDateString(country.locale) + ' &middot; Fuente: fanki.com.mx/api/events/categorized?country=' + code;
+    // Re-init chips, filters, charts
+    init();
+}
+
+const COLORS = ['#6C3CE1','#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#FFEAA7','#DDA0DD','#FF8C42','#98D8C8','#F7DC6F','#BB8FCE','#85C1E9','#F1948A','#82E0AA'];
+
+let sortCol = 'date';
+let sortDir = 'asc';
+
+let selectedTeams = new Set();
+
+function init() {
+    // Populate team chips
+    const teams = [...new Set(DATA.map(e => e.homeTeam).filter(Boolean))].sort();
+    const teamCounts = {};
+    DATA.forEach(e => { if (e.homeTeam) teamCounts[e.homeTeam] = (teamCounts[e.homeTeam]||0) + 1; });
+    // Find team images
+    const teamImages = {};
+    DATA.forEach(e => { if (e.homeTeam && e.homeTeamImg && !teamImages[e.homeTeam]) teamImages[e.homeTeam] = e.homeTeamImg; });
+
+    const chipsContainer = document.getElementById('teamChips');
+    chipsContainer.innerHTML = teams.map(t => {
+        const img = teamImages[t] ? '<img class="chip-img" src="' + teamImages[t] + '" onerror="this.style.display=\'none\'">' : '';
+        return '<button class="chip" data-team="' + t + '" onclick="toggleTeam(this)">' + img + '<span>' + t + '</span><span class="chip-count">' + teamCounts[t] + '</span></button>';
+    }).join('') + '<button class="chip-clear" id="clearTeams" onclick="clearTeams()" style="display:none">✕ Limpiar filtro</button>';
+
+    // Populate category filter (reset first)
+    const categories = [...new Set(DATA.map(e => e.category))].sort();
+    const catSel = document.getElementById('filterCategory');
+    catSel.innerHTML = '<option value="">Todas las categorías</option>';
+    categories.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; catSel.appendChild(o); });
+    applyFilters();
+}
+
+function toggleTeam(el) {
+    const team = el.dataset.team;
+    if (selectedTeams.has(team)) {
+        selectedTeams.delete(team);
+        el.classList.remove('active');
+    } else {
+        selectedTeams.add(team);
+        el.classList.add('active');
+    }
+    document.getElementById('clearTeams').style.display = selectedTeams.size > 0 ? '' : 'none';
+    applyFilters();
+}
+
+function clearTeams() {
+    selectedTeams.clear();
+    document.querySelectorAll('.chip.active').forEach(c => c.classList.remove('active'));
+    document.getElementById('clearTeams').style.display = 'none';
+    applyFilters();
+}
+
+function getFiltered() {
+    const cat = document.getElementById('filterCategory').value;
+    const status = document.getElementById('filterStatus').value;
+    return DATA.filter(e => {
+        if (selectedTeams.size > 0 && !selectedTeams.has(e.homeTeam)) return false;
+        if (cat && e.category !== cat) return false;
+        if (status === 'soldout' && !e.soldOut) return false;
+        if (status === 'available' && e.soldOut) return false;
+        if (status === 'catalog' && !e.showInCatalog) return false;
+        return true;
+    });
+}
+
+function applyFilters() {
+    const filtered = getFiltered();
+    updateKPIs(filtered);
+    updateCharts(filtered);
+    updateTable(filtered);
+}
+
+function updateKPIs(data) {
+    document.getElementById('kpiTotal').textContent = data.length;
+    const catalog = data.filter(e => e.showInCatalog).length;
+    document.getElementById('kpiCatalog').textContent = catalog;
+    document.getElementById('kpiCatalogDetail').textContent = Math.round(catalog/Math.max(data.length,1)*100) + '% del total';
+    const soldOut = data.filter(e => e.soldOut).length;
+    document.getElementById('kpiSoldOut').textContent = soldOut;
+    document.getElementById('kpiSoldOutDetail').textContent = soldOut > 0 ? Math.round(soldOut/Math.max(data.length,1)*100) + '% del total' : 'Ninguno agotado';
+    const teams = new Set(data.map(e => e.homeTeam).filter(Boolean));
+    document.getElementById('kpiTeams').textContent = teams.size;
+
+    // Next event
+    const now = new Date();
+    const upcoming = data.filter(e => new Date(e.dateUtc) > now).sort((a,b) => new Date(a.dateUtc) - new Date(b.dateUtc));
+    if (upcoming.length > 0) {
+        const next = upcoming[0];
+        const d = new Date(next.date || next.dateUtc);
+        document.getElementById('kpiNext').textContent = d.toLocaleDateString('es-MX', {day:'numeric', month:'short'});
+        document.getElementById('kpiNextDetail').textContent = next.name;
+    } else {
+        document.getElementById('kpiNext').textContent = '-';
+        document.getElementById('kpiNextDetail').textContent = 'Sin próximos eventos';
+    }
+}
+
+let chartTeams, chartCategories, chartTimeline, chartAvailability;
+
+function updateCharts(data) {
+    // Events by home team
+    const teamCounts = {};
+    data.forEach(e => { if(e.homeTeam) teamCounts[e.homeTeam] = (teamCounts[e.homeTeam]||0)+1; });
+    const teamLabels = Object.keys(teamCounts).sort((a,b) => teamCounts[b]-teamCounts[a]);
+    const teamValues = teamLabels.map(t => teamCounts[t]);
+
+    if (chartTeams) chartTeams.destroy();
+    chartTeams = new Chart(document.getElementById('chartTeams'), {
+        type: 'bar',
+        data: { labels: teamLabels, datasets: [{ label: 'Eventos', data: teamValues, backgroundColor: COLORS.slice(0, teamLabels.length), borderRadius: 6 }] },
+        options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+    });
+
+    // Events by category
+    const catCounts = {};
+    data.forEach(e => catCounts[e.category] = (catCounts[e.category]||0)+1);
+    const catLabels = Object.keys(catCounts).sort((a,b) => catCounts[b]-catCounts[a]);
+    const catValues = catLabels.map(c => catCounts[c]);
+
+    if (chartCategories) chartCategories.destroy();
+    chartCategories = new Chart(document.getElementById('chartCategories'), {
+        type: 'doughnut',
+        data: { labels: catLabels, datasets: [{ data: catValues, backgroundColor: COLORS.slice(0, catLabels.length) }] },
+        options: { responsive: true, plugins: { legend: { position: 'right', labels: { font: { size: 11 } } } } }
+    });
+
+    // Timeline by month
+    const monthCounts = {};
+    data.forEach(e => {
+        const d = new Date(e.date || e.dateUtc);
+        const key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+        monthCounts[key] = (monthCounts[key]||0)+1;
+    });
+    const monthLabels = Object.keys(monthCounts).sort();
+    const monthNames = monthLabels.map(m => { const [y,mo] = m.split('-'); return new Date(y, mo-1).toLocaleDateString('es-MX', {month:'short', year:'numeric'}); });
+    const monthValues = monthLabels.map(m => monthCounts[m]);
+
+    if (chartTimeline) chartTimeline.destroy();
+    chartTimeline = new Chart(document.getElementById('chartTimeline'), {
+        type: 'bar',
+        data: { labels: monthNames, datasets: [{ label: 'Eventos', data: monthValues, backgroundColor: '#6C3CE1', borderRadius: 6 }] },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+    });
+
+    // Availability doughnut
+    const avail = data.filter(e => !e.soldOut).length;
+    const sold = data.filter(e => e.soldOut).length;
+    const queued = data.filter(e => e.enableQueue).length;
+
+    if (chartAvailability) chartAvailability.destroy();
+    chartAvailability = new Chart(document.getElementById('chartAvailability'), {
+        type: 'doughnut',
+        data: { labels: ['Disponible', 'Agotado', 'Con cola'], datasets: [{ data: [avail - queued, sold, queued], backgroundColor: ['#4ECDC4', '#FF6B6B', '#FF8C42'] }] },
+        options: { responsive: true, plugins: { legend: { position: 'right' } } }
+    });
+}
+
+function updateTable(data) {
+    const sorted = [...data].sort((a,b) => {
+        let va = a[sortCol] || '';
+        let vb = b[sortCol] || '';
+        if (sortCol === 'date') { va = new Date(a.date || a.dateUtc); vb = new Date(b.date || b.dateUtc); }
+        if (sortCol === 'status') { va = a.soldOut ? 'z' : 'a'; vb = b.soldOut ? 'z' : 'a'; }
+        if (va < vb) return sortDir === 'asc' ? -1 : 1;
+        if (va > vb) return sortDir === 'asc' ? 1 : -1;
+        return 0;
+    });
+
+    document.getElementById('tableCount').textContent = sorted.length;
+
+    // Update th classes
+    document.querySelectorAll('th').forEach(th => {
+        th.classList.remove('sorted-asc','sorted-desc');
+        if (th.dataset.col === sortCol) th.classList.add(sortDir === 'asc' ? 'sorted-asc' : 'sorted-desc');
+    });
+
+    const tbody = document.querySelector('#eventsTable tbody');
+    tbody.innerHTML = sorted.map(e => {
+        const d = new Date(e.date || e.dateUtc);
+        const dateStr = d.toLocaleDateString('es-MX', {day:'2-digit', month:'short', year:'numeric'}) + ' ' + d.toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'});
+        let statusBadge = e.soldOut
+            ? '<span class="badge badge-soldout">Agotado</span>'
+            : '<span class="badge badge-available">Disponible</span>';
+        if (e.enableQueue) statusBadge += ' <span class="badge badge-queue">Cola</span>';
+        if (e.showInCatalog) statusBadge += ' <span class="badge badge-catalog">Catálogo</span>';
+
+        const htImg = e.homeTeamImg ? '<img class="team-img" src="' + e.homeTeamImg + '" onerror="this.style.display=\'none\'">' : '';
+        return '<tr>' +
+            '<td style="white-space:nowrap">' + dateStr + '</td>' +
+            '<td><strong>' + e.name + '</strong></td>' +
+            '<td>' + htImg + (e.homeTeam || '-') + '</td>' +
+            '<td>' + (e.awayTeam || '-') + '</td>' +
+            '<td>' + e.category + '</td>' +
+            '<td>' + (e.venue || '-') + '</td>' +
+            '<td>' + (e.city || '-') + '</td>' +
+            '<td>' + statusBadge + '</td>' +
+            '</tr>';
+    }).join('');
+}
+
+function sortTable(col) {
+    if (sortCol === col) { sortDir = sortDir === 'asc' ? 'desc' : 'asc'; }
+    else { sortCol = col; sortDir = 'asc'; }
+    applyFilters();
+}
+
+// Fix footer date
+document.addEventListener('DOMContentLoaded', async () => {
+    await fetchEvents(currentCountry);
+    const country = COUNTRIES[currentCountry];
+    document.querySelector('.footer').innerHTML = 'Generado el ' + new Date().toLocaleDateString(country.locale) + ' &middot; Fuente: fanki.com.mx/api/events/categorized?country=' + currentCountry;
+    init();
+});
+</script>
+</body>
+</html>

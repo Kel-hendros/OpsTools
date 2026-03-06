@@ -42,6 +42,15 @@ const TOOLS = [
         path: 'tools/commercial-proposal/index.html',
         accentColor: '#f59e0b',
     },
+    {
+        id: 'event-visualizer',
+        name: 'Event Visualizer 2.0',
+        subtitle: 'Event Analytics Dashboard',
+        description: 'Visualizá métricas, filtros y gráficos de todos los eventos activos en Fanki México con datos en vivo.',
+        icon: '📊',
+        path: 'tools/event-visualizer/index.html',
+        accentColor: '#6C3CE1',
+    },
 ];
 
 function renderTools() {
