@@ -106,6 +106,7 @@ class GridManager {
 
     this.stadiumData = null;
     this.allSections = [];
+    this.unnumberedSections = new Set();
     this.sectionsCache = {};
     this.sectionToParentMap = {};
     this.currentSectionCode = "PISO_2/SECCION_503A";
@@ -740,6 +741,7 @@ class GridManager {
       const json = JSON.parse(this.layoutJsonPaste.value);
       this.stadiumData = json;
       this.allSections = [];
+      this.unnumberedSections = new Set();
       this.extractLeafSections(json.sections || []);
 
       if (this.allSections.length > 0) {
@@ -750,7 +752,11 @@ class GridManager {
 
         this.updateProjectStats();
 
-        const firstCode = this.allSections[0];
+        // Find the first numbered (editable) section to open
+        const firstNumbered = this.allSections.find(
+          (c) => !this.unnumberedSections.has(c),
+        );
+        const firstCode = firstNumbered || this.allSections[0];
         if (!this.sectionsCache[firstCode]) {
           this.switchSection(firstCode);
         } else {
@@ -759,7 +765,7 @@ class GridManager {
         }
         this.persistProject();
       } else {
-        alert("No leaf sections (unnumbered: false) found in the JSON.");
+        alert("No sections found in the JSON.");
       }
     } catch (e) {
       alert("Invalid JSON format.");
@@ -769,14 +775,18 @@ class GridManager {
 
   extractLeafSections(sections, parentCode = null) {
     sections.forEach((s) => {
-      if (s.unnumbered === true) return;
-
       if (s.sections && s.sections.length > 0) {
+        // Parent node with children — recurse
         this.extractLeafSections(s.sections, s.code);
       } else {
+        // Leaf section — always add
         this.allSections.push(s.code);
         if (parentCode) {
           this.sectionToParentMap[s.code] = parentCode;
+        }
+        // Mark unnumbered leaves so we can disable them in the UI
+        if (s.unnumbered === true) {
+          this.unnumberedSections.add(s.code);
         }
       }
     });
@@ -787,22 +797,27 @@ class GridManager {
 
     let parentCount = 0;
     let leafCount = 0;
+    let unnumberedCount = 0;
 
     const countRecursive = (sections) => {
       sections.forEach((s) => {
-        if (s.unnumbered === true) return;
         if (s.sections && s.sections.length > 0) {
           parentCount++;
           countRecursive(s.sections);
         } else {
           leafCount++;
+          if (s.unnumbered === true) unnumberedCount++;
         }
       });
     };
 
     countRecursive(this.stadiumData.sections || []);
     this.parentCountSpan.textContent = parentCount;
-    this.leafCountSpan.textContent = leafCount;
+    const numberedCount = leafCount - unnumberedCount;
+    this.leafCountSpan.textContent =
+      unnumberedCount > 0
+        ? `${numberedCount} + ${unnumberedCount} sin numerar`
+        : `${leafCount}`;
   }
 
   renderSectionsList() {
@@ -823,8 +838,6 @@ class GridManager {
     };
 
     sections.forEach((s) => {
-      if (s.unnumbered === true) return;
-
       if (s.sections && s.sections.length > 0) {
         const node = document.createElement("div");
         node.className = "tree-node";
@@ -870,26 +883,42 @@ class GridManager {
         node.appendChild(group);
         container.appendChild(node);
       } else {
-        const cached = this.sectionsCache[s.code];
-        const hasSeats =
-          cached && cached.gridData.some((c) => c.type === "seat");
-        const isConfigured = !!cached && hasSeats;
+        const isUnnumbered = this.unnumberedSections.has(s.code);
 
-        if (s.code === this.currentSectionCode) {
-          subtreeHasActive = true;
+        if (isUnnumbered) {
+          // Unnumbered section — show as disabled, no grid allowed
+          const item = document.createElement("div");
+          item.className = "section-item unnumbered";
+          item.title = "Sección sin numerar — no requiere grilla";
+          item.innerHTML = `
+            <span class="status-dot unnumbered"></span>
+            <span class="name">${s.name || s.code}</span>
+            <span class="unnumbered-badge">SIN NUMERAR</span>
+          `;
+          container.appendChild(item);
+          // Don't count unnumbered in stats for progress tracking
+        } else {
+          const cached = this.sectionsCache[s.code];
+          const hasSeats =
+            cached && cached.gridData.some((c) => c.type === "seat");
+          const isConfigured = !!cached && hasSeats;
+
+          if (s.code === this.currentSectionCode) {
+            subtreeHasActive = true;
+          }
+
+          subtreeStatus.totalLeaves += 1;
+          if (isConfigured) subtreeStatus.configuredLeaves += 1;
+
+          const button = document.createElement("button");
+          button.className = `section-item ${s.code === this.currentSectionCode ? "active" : ""}`;
+          button.innerHTML = `
+            <span class="status-dot ${isConfigured ? "configured" : "empty"}"></span>
+            <span class="name">${s.name || s.code}</span>
+          `;
+          button.onclick = () => this.switchSection(s.code);
+          container.appendChild(button);
         }
-
-        subtreeStatus.totalLeaves += 1;
-        if (isConfigured) subtreeStatus.configuredLeaves += 1;
-
-        const button = document.createElement("button");
-        button.className = `section-item ${s.code === this.currentSectionCode ? "active" : ""}`;
-        button.innerHTML = `
-          <span class="status-dot ${isConfigured ? "configured" : "empty"}"></span>
-          <span class="name">${s.name || s.code}</span>
-        `;
-        button.onclick = () => this.switchSection(s.code);
-        container.appendChild(button);
       }
     });
 
@@ -976,6 +1005,7 @@ class GridManager {
     const data = {
       stadiumData: this.stadiumData,
       allSections: this.allSections,
+      unnumberedSections: [...this.unnumberedSections],
       sectionsCache: this.sectionsCache,
       currentSectionCode: this.currentSectionCode,
     };
@@ -1000,6 +1030,7 @@ class GridManager {
       if (this.stadiumData) {
         this.allSections = [];
         this.sectionToParentMap = {};
+        this.unnumberedSections = new Set();
         this.extractLeafSections(this.stadiumData.sections || []);
 
         this.sectionsNav.style.display = "flex";
@@ -1025,6 +1056,7 @@ class GridManager {
     ) {
       this.stadiumData = null;
       this.allSections = [];
+      this.unnumberedSections = new Set();
       this.sectionsCache = {};
       this.currentSectionCode = "PISO_2/SECCION_503A";
 
@@ -1109,6 +1141,7 @@ class GridManager {
     let filesAdded = 0;
 
     this.allSections.forEach((code) => {
+      if (this.unnumberedSections.has(code)) return; // skip unnumbered
       const cached = this.sectionsCache[code];
 
       if (!cached) return;

@@ -51,6 +51,15 @@ const TOOLS = [
         path: 'tools/event-visualizer/index.html',
         accentColor: '#6C3CE1',
     },
+    {
+        id: 'layout-generator',
+        name: 'Layout Generator',
+        subtitle: 'Venue Layout Builder',
+        description: 'Generá layouts JSON para venues en Fanki con carga de CSV, gestión de secciones y sub-secciones.',
+        icon: '🏗️',
+        path: 'tools/layout-generator/index.html',
+        accentColor: '#06b6d4',
+    },
 ];
 
 function renderTools() {
