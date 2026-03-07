@@ -76,6 +76,9 @@
         .badge-queue { background: rgba(245,158,11,0.15); color: #fbbf24; }
         .badge-catalog { background: rgba(59,130,246,0.15); color: #60a5fa; }
         .badge-hidden { background: rgba(255,255,255,0.06); color: var(--text-secondary); }
+        tr.row-today { background: rgba(108,60,225,0.10); }
+        tr.row-today:hover { background: rgba(108,60,225,0.16); }
+        .badge-today { background: rgba(108,60,225,0.20); color: #a78bfa; }
 
         .footer { text-align: center; padding: 16px; font-size: 12px; color: var(--text-secondary); }
         @media (max-width: 768px) {
@@ -198,7 +201,6 @@
                     <th data-col="awayTeam" onclick="sortTable('awayTeam')">Visitante</th>
                     <th data-col="category" onclick="sortTable('category')">Categoría</th>
                     <th data-col="venue" onclick="sortTable('venue')">Sede</th>
-                    <th data-col="city" onclick="sortTable('city')">Ciudad</th>
                     <th data-col="status" onclick="sortTable('status')">Estado</th>
                 </tr>
             </thead>
@@ -465,24 +467,29 @@ function updateTable(data) {
     });
 
     const tbody = document.querySelector('#eventsTable tbody');
+    const now = new Date();
+    const todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
     tbody.innerHTML = sorted.map(e => {
         const d = new Date(e.date || e.dateUtc);
+        const evDateStr = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+        const isToday = evDateStr === todayStr;
         const dateStr = d.toLocaleDateString('es-MX', {day:'2-digit', month:'short', year:'numeric'}) + ' ' + d.toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'});
         let statusBadge = e.soldOut
             ? '<span class="badge badge-soldout">Agotado</span>'
             : '<span class="badge badge-available">Disponible</span>';
         if (e.enableQueue) statusBadge += ' <span class="badge badge-queue">Cola</span>';
         if (e.showInCatalog) statusBadge += ' <span class="badge badge-catalog">Catálogo</span>';
+        if (isToday) statusBadge += ' <span class="badge badge-today">Hoy</span>';
 
         const htImg = e.homeTeamImg ? '<img class="team-img" src="' + e.homeTeamImg + '" onerror="this.style.display=\'none\'">' : '';
-        return '<tr>' +
+        const atImg = e.awayTeamImg ? '<img class="team-img" src="' + e.awayTeamImg + '" onerror="this.style.display=\'none\'">' : '';
+        return '<tr' + (isToday ? ' class="row-today"' : '') + '>' +
             '<td style="white-space:nowrap">' + dateStr + '</td>' +
-            '<td><strong>' + e.name + '</strong></td>' +
+            '<td><strong>' + e.name + '</strong><br><span style="font-size:11px;color:var(--text-secondary)">' + (e.code || '') + '</span></td>' +
             '<td>' + htImg + (e.homeTeam || '-') + '</td>' +
-            '<td>' + (e.awayTeam || '-') + '</td>' +
+            '<td>' + atImg + (e.awayTeam || '-') + '</td>' +
             '<td>' + e.category + '</td>' +
             '<td>' + (e.venue || '-') + '</td>' +
-            '<td>' + (e.city || '-') + '</td>' +
             '<td>' + statusBadge + '</td>' +
             '</tr>';
     }).join('');
