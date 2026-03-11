@@ -154,6 +154,11 @@ class LayoutGenerator {
         </div>
       </div>`;
 
+    const nameEl = document.getElementById("cfgName");
+    const codeEl = document.getElementById("cfgCode");
+    let userEditedCode =
+      codeEl.value.trim() !== "" && codeEl.value !== this.autoCode(nameEl.value);
+
     const bind = (id, field) => {
       const el = document.getElementById(id);
       el.addEventListener("input", () => {
@@ -162,10 +167,21 @@ class LayoutGenerator {
         for (let i = 0; i < keys.length - 1; i++) target = target[keys[i]];
         target[keys[keys.length - 1]] = el.type === "number" ? Number(el.value) : el.value;
 
-        // Auto-generate code from name if code is empty
-        if (field === "name" && !document.getElementById("cfgCode").value.trim()) {
+        if (field === "code") {
+          const trimmedCode = el.value.trim();
+          userEditedCode = trimmedCode !== "" && trimmedCode !== this.autoCode(nameEl.value);
+
+          if (!trimmedCode) {
+            this.config.code = this.autoCode(nameEl.value);
+            codeEl.value = this.config.code;
+            userEditedCode = false;
+          }
+        }
+
+        // Keep code synced with name until the user overrides it manually.
+        if (field === "name" && !userEditedCode) {
           this.config.code = this.autoCode(el.value);
-          document.getElementById("cfgCode").value = this.config.code;
+          codeEl.value = this.config.code;
         }
         this.save();
       });

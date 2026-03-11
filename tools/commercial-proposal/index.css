@@ -1,12 +1,12 @@
 /* ─── Variables ─── */
 :root {
-  --bg-color: #0c0e14;
-  --surface-bg: #161a23;
-  --surface-raised: #1c2130;
-  --border-color: rgba(255, 255, 255, 0.08);
-  --border-hover: rgba(255, 255, 255, 0.18);
-  --text-primary: #f0f2f5;
-  --text-secondary: #7a8494;
+  --bg-color: #eff4fb;
+  --surface-bg: rgba(255, 255, 255, 0.94);
+  --surface-raised: #f5f8fc;
+  --border-color: rgba(15, 23, 42, 0.1);
+  --border-hover: rgba(180, 83, 9, 0.22);
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
   --accent: #f59e0b;
   --accent-hover: #fbbf24;
   --accent-dim: rgba(245, 158, 11, 0.12);
@@ -16,9 +16,9 @@
   --accent-red: #ef4444;
   --accent-red-dim: rgba(239, 68, 68, 0.12);
   --font-main: "Outfit", sans-serif;
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 8px 20px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 18px 42px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 28px 68px rgba(15, 23, 42, 0.12);
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
@@ -39,7 +39,9 @@
 
 body {
   font-family: var(--font-main);
-  background-color: var(--bg-color);
+  background:
+    radial-gradient(circle at top, rgba(245, 158, 11, 0.14), transparent 24%),
+    linear-gradient(180deg, #f9fbfe 0%, var(--bg-color) 100%);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -634,4 +636,68 @@ body {
     font-size: 0.75rem;
     padding: 0.4rem 0.7rem;
   }
+}
+
+/* ─── Light Theme Overrides ─── */
+.app-header {
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.back-home:hover,
+.btn-secondary,
+.tab-btn:hover,
+.checkbox-item:hover,
+.notes-toggle:hover {
+  background: rgba(15, 23, 42, 0.04);
+}
+
+.btn-secondary {
+  border-color: rgba(15, 23, 42, 0.1);
+}
+
+.form-item,
+.summary-bar {
+  background: var(--surface-bg);
+}
+
+.form-item.incomplete {
+  border-left-color: rgba(15, 23, 42, 0.08);
+}
+
+.field-input input[type="text"],
+.field-input input[type="date"],
+.field-input input[type="number"],
+.field-input select,
+.field-input textarea,
+.notes-area textarea {
+  background-color: #f8fbff;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.field-input input:focus,
+.field-input select:focus,
+.field-input textarea:focus,
+.notes-area textarea:focus {
+  box-shadow: 0 0 0 3px var(--accent-dim), inset 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.checkbox-item {
+  background: rgba(15, 23, 42, 0.04);
+}
+
+.checkbox-item::before {
+  border-color: rgba(15, 23, 42, 0.12);
+  background: #fff;
+}
+
+.progress-bar-track {
+  background: rgba(15, 23, 42, 0.08);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.14);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 23, 42, 0.22);
 }

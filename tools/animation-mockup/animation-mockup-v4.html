@@ -8,8 +8,8 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', sans-serif;
-    background: #0a0a0a;
-    color: #e0e0e0;
+    background: linear-gradient(180deg, #f9fbfe 0%, #eaf1f8 100%);
+    color: #0f172a;
     display: flex;
     min-height: 100vh;
   }
@@ -17,8 +17,8 @@
   /* ── CONTROLS ── */
   .controls {
     width: 340px; min-width: 340px;
-    background: #141414;
-    border-right: 1px solid #2a2a2a;
+    background: rgba(255,255,255,0.94);
+    border-right: 1px solid rgba(15,23,42,0.1);
     padding: 20px;
     overflow-y: auto;
     height: 100vh;
@@ -27,69 +27,69 @@
   .controls h2 {
     font-size: 11px; font-weight: 600;
     text-transform: uppercase; letter-spacing: 0.08em;
-    color: #666; margin: 16px 0 8px;
+    color: #64748b; margin: 16px 0 8px;
   }
   .controls h2:first-child { margin-top: 0; }
-  label { display: block; font-size: 12px; color: #999; margin-bottom: 4px; }
+  label { display: block; font-size: 12px; color: #64748b; margin-bottom: 4px; }
   select {
-    width: 100%; background: #1e1e1e; border: 1px solid #333;
-    color: #ddd; padding: 6px 8px; border-radius: 6px; font-size: 13px;
+    width: 100%; background: #f8fbff; border: 1px solid rgba(15,23,42,0.12);
+    color: #0f172a; padding: 6px 8px; border-radius: 6px; font-size: 13px;
   }
   .range-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
   .range-row input { flex: 1; }
-  .range-val { font-size: 12px; color: #888; min-width: 42px; text-align: right; font-variant-numeric: tabular-nums; }
+  .range-val { font-size: 12px; color: #64748b; min-width: 42px; text-align: right; font-variant-numeric: tabular-nums; }
   input[type="range"] {
-    -webkit-appearance: none; height: 4px; background: #333;
+    -webkit-appearance: none; height: 4px; background: #cbd5e1;
     border-radius: 2px; outline: none;
   }
   input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none; width: 14px; height: 14px;
     background: #fff; border-radius: 50%; cursor: pointer;
   }
-  .divider { height: 1px; background: #2a2a2a; margin: 12px 0; }
+  .divider { height: 1px; background: rgba(15,23,42,0.08); margin: 12px 0; }
   .btn-row { display: flex; gap: 6px; margin-top: 8px; }
   .btn {
     flex: 1; padding: 10px; border: none; border-radius: 8px;
     font-size: 13px; font-weight: 600; cursor: pointer;
   }
-  .btn-primary { background: #fff; color: #000; }
-  .btn-primary:hover { background: #ddd; }
-  .btn-secondary { background: #2a2a2a; color: #ccc; }
-  .btn-secondary:hover { background: #333; }
+  .btn-primary { background: #2563eb; color: #fff; }
+  .btn-primary:hover { background: #1d4ed8; }
+  .btn-secondary { background: #eef4fb; color: #0f172a; border: 1px solid rgba(15,23,42,0.1); }
+  .btn-secondary:hover { background: #e2e8f0; }
   .toggle-row { display: flex; gap: 4px; margin-bottom: 6px; }
   .toggle-btn {
-    flex: 1; padding: 6px; background: #1e1e1e; border: 1px solid #333;
-    border-radius: 6px; color: #888; font-size: 11px; cursor: pointer; text-align: center;
+    flex: 1; padding: 6px; background: #f8fbff; border: 1px solid rgba(15,23,42,0.12);
+    border-radius: 6px; color: #64748b; font-size: 11px; cursor: pointer; text-align: center;
   }
-  .toggle-btn:hover { border-color: #555; }
-  .toggle-btn.on { border-color: #fff; color: #fff; }
+  .toggle-btn:hover { border-color: #94a3b8; }
+  .toggle-btn.on { border-color: #2563eb; color: #2563eb; background: rgba(37,99,235,0.08); }
   .code-out {
-    background: #1a1a1a; border: 1px solid #333; border-radius: 8px;
+    background: #f8fbff; border: 1px solid rgba(15,23,42,0.12); border-radius: 8px;
     padding: 10px; font-family: 'SF Mono', monospace; font-size: 11px;
-    color: #8f8; white-space: pre-wrap; max-height: 320px; overflow-y: auto; line-height: 1.5;
+    color: #047857; white-space: pre-wrap; max-height: 320px; overflow-y: auto; line-height: 1.5;
   }
   .title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
   .title-row h1 { font-size: 16px; font-weight: 700; }
   .back-home {
-    color: #888; text-decoration: none; font-size: 12px; font-weight: 400;
-    padding: 3px 8px; border: 1px solid #333; border-radius: 4px;
+    color: #64748b; text-decoration: none; font-size: 12px; font-weight: 400;
+    padding: 3px 8px; border: 1px solid rgba(15,23,42,0.12); border-radius: 4px;
     transition: color 0.15s, border-color 0.15s; white-space: nowrap;
   }
-  .back-home:hover { color: #e0e0e0; border-color: #888; }
-  .badge { font-size: 10px; padding: 2px 8px; background: #2a2a2a; border-radius: 10px; color: #888; }
+  .back-home:hover { color: #0f172a; border-color: #94a3b8; }
+  .badge { font-size: 10px; padding: 2px 8px; background: #eef4fb; border-radius: 10px; color: #64748b; }
   .controls::-webkit-scrollbar { width: 4px; }
-  .controls::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+  .controls::-webkit-scrollbar-thumb { background: rgba(15,23,42,0.18); border-radius: 2px; }
 
   /* Level selector */
   .level-select {
-    width: 100%; background: #1a1a2e; border: 1px solid #4a4aff;
-    color: #aaf; padding: 8px 10px; border-radius: 8px; font-size: 13px;
+    width: 100%; background: #eef4ff; border: 1px solid rgba(37,99,235,0.28);
+    color: #1d4ed8; padding: 8px 10px; border-radius: 8px; font-size: 13px;
     font-weight: 600;
   }
 
   /* Anim section block */
   .anim-section {
-    background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px;
+    background: #f8fbff; border: 1px solid rgba(15,23,42,0.08); border-radius: 8px;
     padding: 10px 12px; margin-bottom: 8px;
   }
   .anim-section h3 {
@@ -114,17 +114,18 @@
     position: absolute; top: 20px; left: 20px; display: flex; gap: 6px; z-index: 20;
   }
   .preset-btn {
-    padding: 7px 14px; border: 1px solid #333; border-radius: 8px;
-    background: #1a1a1a; color: #ccc; font-size: 12px; font-weight: 600;
+    padding: 7px 14px; border: 1px solid rgba(15,23,42,0.12); border-radius: 8px;
+    background: rgba(255,255,255,0.92); color: #475569; font-size: 12px; font-weight: 600;
     cursor: pointer; transition: all 0.15s; white-space: nowrap;
   }
-  .preset-btn:hover { background: #2a2a2a; border-color: #8b5cf6; color: #fff; }
-  .preset-btn.active { border-color: #8b5cf6; color: #fff; background: #2a1a4a; }
+  .preset-btn:hover { background: #f8fbff; border-color: #8b5cf6; color: #4c1d95; }
+  .preset-btn.active { border-color: #8b5cf6; color: #4c1d95; background: #ede9fe; }
 
   /* ── PREVIEW ── */
   .preview-area {
     flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px;
     position: relative;
+    background: radial-gradient(circle at top, rgba(37,99,235,0.08), transparent 28%);
   }
   .phone {
     width: 375px; height: 750px; background: #f0f4f8; border-radius: 44px;
@@ -176,14 +177,14 @@
 
   .hero {
     height: 240px; border-radius: 20px; overflow: hidden; position: relative;
-    background: linear-gradient(135deg, #1a1a3e, #0d0d2b 50%, #1a2a4e);
+    background: linear-gradient(135deg, #dbeafe, #eff6ff 50%, #c7d2fe);
   }
-  .hero-text { position: absolute; bottom: 20px; left: 20px; color: #fff; z-index: 1; }
+  .hero-text { position: absolute; bottom: 20px; left: 20px; color: #0f172a; z-index: 1; }
   .hero-text h3 { font-size: 20px; font-weight: 700; }
-  .hero-text p { font-size: 12px; opacity: 0.7; margin-top: 4px; }
+  .hero-text p { font-size: 12px; opacity: 0.7; margin-top: 4px; color: #334155; }
   .hero::after {
     content: ''; position: absolute; inset: 0;
-    background: linear-gradient(to top, rgba(0,0,0,0.5), transparent);
+    background: linear-gradient(to top, rgba(255,255,255,0.18), transparent);
   }
 
   /* ── STEP 2 ── */
@@ -213,11 +214,11 @@
   .logo-circle:nth-child(3) { z-index: 1; }
   .detail-hero {
     height: 240px; border-radius: 20px; overflow: hidden; position: relative;
-    background: linear-gradient(135deg, #0a1628, #162a4e);
+    background: linear-gradient(135deg, #dbeafe, #eef2ff);
   }
   .detail-hero-inner {
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    color: rgba(255,255,255,0.15); font-size: 80px; font-weight: 900; font-family: serif;
+    color: rgba(30,41,59,0.12); font-size: 80px; font-weight: 900; font-family: serif;
   }
 
   /* ════════════════════════════════════

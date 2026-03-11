@@ -1,12 +1,12 @@
 /* ─── Variables ─── */
 :root {
-  --bg-color: #0c0e14;
-  --surface-bg: #161a23;
-  --surface-raised: #1c2130;
-  --border-color: rgba(255, 255, 255, 0.08);
-  --border-hover: rgba(255, 255, 255, 0.18);
-  --text-primary: #f0f2f5;
-  --text-secondary: #7a8494;
+  --bg-color: #eff4fb;
+  --surface-bg: rgba(255, 255, 255, 0.94);
+  --surface-raised: #f5f8fc;
+  --border-color: rgba(15, 23, 42, 0.1);
+  --border-hover: rgba(14, 116, 144, 0.24);
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
   --accent: #06b6d4;
   --accent-hover: #22d3ee;
   --accent-dim: rgba(6, 182, 212, 0.12);
@@ -20,9 +20,9 @@
   --accent-purple: #8b5cf6;
   --accent-purple-dim: rgba(139, 92, 246, 0.12);
   --font-main: "Outfit", sans-serif;
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 8px 20px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 18px 42px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 28px 68px rgba(15, 23, 42, 0.12);
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
@@ -43,7 +43,9 @@
 
 body {
   font-family: var(--font-main);
-  background-color: var(--bg-color);
+  background:
+    radial-gradient(circle at top, rgba(6, 182, 212, 0.14), transparent 24%),
+    linear-gradient(180deg, #f9fbfe 0%, var(--bg-color) 100%);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -870,4 +872,90 @@ body {
   .sections-table td {
     padding: 0.5rem;
   }
+}
+
+/* ─── Light Theme Overrides ─── */
+.app-header {
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.back-home:hover,
+.btn-secondary,
+.btn-ghost:hover,
+.tab-btn:hover,
+.action-btn:hover,
+.modal-close:hover {
+  background: rgba(15, 23, 42, 0.04);
+}
+
+.btn-secondary {
+  border-color: rgba(15, 23, 42, 0.1);
+}
+
+.form-input,
+.form-select {
+  background-color: #f8fbff;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.form-input:focus,
+.form-select:focus {
+  box-shadow: 0 0 0 3px var(--accent-dim), inset 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.form-select option,
+.json-output-header,
+.sections-table th,
+.modal,
+.toast,
+.form-card,
+.sections-table-wrapper,
+.json-output-wrapper {
+  background: var(--surface-bg);
+}
+
+.csv-zone {
+  background: rgba(14, 116, 144, 0.04);
+}
+
+.sections-table td {
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.sections-table tr:hover td {
+  background: rgba(14, 116, 144, 0.04);
+}
+
+.sections-table .color-swatch {
+  border-color: rgba(15, 23, 42, 0.12);
+}
+
+.badge-muted {
+  background: rgba(15, 23, 42, 0.06);
+}
+
+.action-btn.danger:hover {
+  background: rgba(239, 68, 68, 0.14);
+}
+
+.children-count:hover {
+  background: rgba(139, 92, 246, 0.14);
+}
+
+.json-key { color: #0f766e; }
+.json-string { color: #0369a1; }
+.json-number { color: #b45309; }
+.json-bool { color: #be185d; }
+.json-null { color: #64748b; }
+
+.modal-overlay {
+  background: rgba(241, 245, 249, 0.76);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.14);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 23, 42, 0.22);
 }

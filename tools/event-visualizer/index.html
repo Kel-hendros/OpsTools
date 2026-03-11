@@ -10,13 +10,13 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1" integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ" crossorigin="anonymous"></script>
     <style>
         :root {
-            --bg: #0e1117;
-            --surface: #161b22;
-            --surface-raised: #1c2333;
-            --border: rgba(255,255,255,0.08);
-            --border-hover: rgba(255,255,255,0.18);
-            --text-primary: #e6edf3;
-            --text-secondary: #8b949e;
+            --bg: #eef4fb;
+            --surface: rgba(255,255,255,0.94);
+            --surface-raised: #f5f8fc;
+            --border: rgba(15,23,42,0.1);
+            --border-hover: rgba(108,60,225,0.2);
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
             --accent: #6C3CE1;
             --accent-dim: rgba(108,60,225,0.15);
             --font-main: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -25,7 +25,7 @@
             --radius-lg: 14px;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: var(--font-main); background: var(--bg); color: var(--text-primary); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+        body { font-family: var(--font-main); background: radial-gradient(circle at top, rgba(108,60,225,0.12), transparent 24%), linear-gradient(180deg, #f9fbfe 0%, var(--bg) 100%); color: var(--text-primary); min-height: 100vh; -webkit-font-smoothing: antialiased; }
 
         /* --- App Header --- */
         .app-header { display: flex; align-items: center; justify-content: space-between; height: 60px; padding: 0 1.5rem; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; backdrop-filter: blur(12px); }
@@ -38,13 +38,13 @@
 
         /* --- Dashboard --- */
         .dashboard { max-width: 1400px; margin: 0 auto; padding: 20px; }
-        .dashboard-header { background: linear-gradient(135deg, #6C3CE1 0%, #4A1DB2 100%); color: white; padding: 24px 32px; border-radius: var(--radius-lg); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+        .dashboard-header { background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); color: var(--text-primary); padding: 24px 32px; border-radius: var(--radius-lg); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; border: 1px solid rgba(108,60,225,0.14); }
         .dashboard-header h2 { font-size: 20px; font-weight: 700; }
-        .dashboard-header .subtitle { font-size: 14px; opacity: 0.8; margin-top: 4px; }
+        .dashboard-header .subtitle { font-size: 14px; opacity: 0.8; margin-top: 4px; color: #5b21b6; }
         .filters { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
-        .filters select { padding: 8px 14px; border-radius: 8px; border: none; font-size: 14px; background: rgba(255,255,255,0.15); color: white; cursor: pointer; min-width: 160px; }
+        .filters select { padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(108,60,225,0.16); font-size: 14px; background: rgba(255,255,255,0.72); color: var(--text-primary); cursor: pointer; min-width: 160px; }
         .filters select option { color: #333; background: white; }
-        .filters label { font-size: 13px; opacity: 0.85; }
+        .filters label { font-size: 13px; opacity: 0.85; color: #5b21b6; }
 
         /* --- KPIs --- */
         .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
@@ -63,11 +63,11 @@
         .table-section h3 { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: var(--text-primary); }
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
         th { background: var(--surface-raised); padding: 10px 12px; text-align: left; font-weight: 600; color: var(--text-secondary); cursor: pointer; user-select: none; border-bottom: 2px solid var(--border); white-space: nowrap; }
-        th:hover { background: rgba(255,255,255,0.06); }
+        th:hover { background: rgba(15,23,42,0.06); }
         th.sorted-asc::after { content: ' \25B2'; font-size: 10px; }
         th.sorted-desc::after { content: ' \25BC'; font-size: 10px; }
         td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text-primary); }
-        tr:hover { background: rgba(255,255,255,0.03); }
+        tr:hover { background: rgba(15,23,42,0.04); }
 
         /* --- Badges --- */
         .badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
@@ -75,7 +75,7 @@
         .badge-available { background: rgba(16,185,129,0.15); color: #34d399; }
         .badge-queue { background: rgba(245,158,11,0.15); color: #fbbf24; }
         .badge-catalog { background: rgba(59,130,246,0.15); color: #60a5fa; }
-        .badge-hidden { background: rgba(255,255,255,0.06); color: var(--text-secondary); }
+        .badge-hidden { background: rgba(15,23,42,0.06); color: var(--text-secondary); }
         tr.row-today { background: rgba(108,60,225,0.10); }
         tr.row-today:hover { background: rgba(108,60,225,0.16); }
         .badge-today { background: rgba(108,60,225,0.20); color: #a78bfa; }
@@ -100,15 +100,28 @@
         .chip-clear:hover { border-color: rgba(239,68,68,0.4); color: #f87171; background: rgba(239,68,68,0.08); }
 
         /* --- Country Selector --- */
-        .country-selector select { padding: 8px 14px; border-radius: 8px; border: none; font-size: 15px; font-weight: 600; background: rgba(255,255,255,0.15); color: white; cursor: pointer; min-width: 180px; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='white' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6.5 6.5-6.5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+        .country-selector select { padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(108,60,225,0.16); font-size: 15px; font-weight: 600; background: rgba(255,255,255,0.72); color: var(--text-primary); cursor: pointer; min-width: 180px; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%235b21b6' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6.5 6.5-6.5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
         .country-selector select option { color: #333; background: white; font-weight: 500; }
 
         /* --- Loading overlay --- */
-        .loading-overlay { position: fixed; top: 60px; left: 0; right: 0; bottom: 0; background: rgba(14,17,23,0.85); display: flex; align-items: center; justify-content: center; z-index: 200; backdrop-filter: blur(4px); }
+        .loading-overlay { position: fixed; top: 60px; left: 0; right: 0; bottom: 0; background: rgba(241,245,249,0.82); display: flex; align-items: center; justify-content: center; z-index: 200; backdrop-filter: blur(4px); }
         .loading-spinner { text-align: center; color: var(--text-secondary); }
         .loading-spinner .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .loading-spinner p { font-size: 14px; }
+
+        .app-header,
+        .kpi,
+        .chart-card,
+        .table-section,
+        .chip {
+            background: var(--surface);
+        }
+
+        .back-home:hover,
+        .chip:hover {
+            background: rgba(15,23,42,0.04);
+        }
     </style>
 </head>
 <body>
@@ -215,10 +228,9 @@
 </div>
 
 <script>
-// Dark theme defaults for Chart.js
-Chart.defaults.color = '#8b949e';
-Chart.defaults.borderColor = 'rgba(255,255,255,0.08)';
-Chart.defaults.plugins.legend.labels.color = '#8b949e';
+Chart.defaults.color = '#64748b';
+Chart.defaults.borderColor = 'rgba(15,23,42,0.1)';
+Chart.defaults.plugins.legend.labels.color = '#64748b';
 
 let DATA = [];
 let currentCountry = 'MEX';

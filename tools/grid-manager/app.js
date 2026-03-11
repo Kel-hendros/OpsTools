@@ -12,16 +12,16 @@ const STEP = CELL + GAP; // 36
 const COLORS = {
   seat: "#3b82f6",
   seatHover: "#60a5fa",
-  empty: "#1e293b",
-  emptyHover: "#2d3a4d",
-  emptyBorder: "rgba(255,255,255,0.1)",
+  empty: "#e2e8f0",
+  emptyHover: "#cbd5e1",
+  emptyBorder: "rgba(148,163,184,0.9)",
   emptyHoverBorder: "#3b82f6",
   labelA: "#059669",
   labelB: "#10b981",
   cornerBorder: "#10b981",
   text: "#ffffff",
   labelText: "#000000",
-  bg: "#080a0f",
+  bg: "#ffffff",
 };
 
 class GridManager {

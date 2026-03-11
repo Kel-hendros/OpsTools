@@ -1,10 +1,10 @@
 :root {
-    --bg: #0e1117;
-    --surface: #161b22;
-    --surface-hover: #1c2333;
-    --border: rgba(255, 255, 255, 0.08);
-    --text-primary: #e6edf3;
-    --text-secondary: #8b949e;
+    --bg: #eef4fb;
+    --surface: rgba(255, 255, 255, 0.92);
+    --surface-hover: #f8fbff;
+    --border: rgba(15, 23, 42, 0.1);
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
     --accent: #58a6ff;
     --font-main: 'Outfit', sans-serif;
 }
@@ -18,7 +18,9 @@
 }
 
 body {
-    background-color: var(--bg);
+    background:
+        radial-gradient(circle at top, rgba(88, 166, 255, 0.16), transparent 30%),
+        linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
     color: var(--text-primary);
     font-family: var(--font-main);
     min-height: 100vh;
@@ -75,7 +77,7 @@ body {
 
 .tool-card:hover {
     background: var(--surface-hover);
-    border-color: rgba(255, 255, 255, 0.12);
+    border-color: rgba(88, 166, 255, 0.2);
     transform: translateY(-2px);
 }
 
