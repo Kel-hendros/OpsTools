@@ -6,450 +6,7 @@
     <title>Event Request — Ops Tools</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-    <style>
-        /* ── Variables ─────────────────────────────────────────── */
-        :root {
-            --bg: #eff4fb;
-            --surface: rgba(255,255,255,0.94);
-            --surface-raised: #f5f8fc;
-            --surface-hover: #eef5fb;
-            --border: rgba(15,23,42,0.1);
-            --border-focus: rgba(16,185,129,0.5);
-            --text-primary: #0f172a;
-            --text-secondary: #64748b;
-            --text-muted: #94a3b8;
-            --accent: #10b981;
-            --accent-glow: rgba(16,185,129,0.15);
-            --accent-hover: #34d399;
-            --danger: #ef4444;
-            --danger-bg: rgba(239,68,68,0.1);
-            --warning: #f59e0b;
-            --font-main: 'Outfit', sans-serif;
-            --radius: 8px;
-            --radius-lg: 12px;
-            --transition: 0.2s cubic-bezier(0.4,0,0.2,1);
-        }
-
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-        body {
-            background:
-                radial-gradient(circle at top, rgba(16,185,129,0.12), transparent 24%),
-                linear-gradient(180deg, #f9fbfe 0%, var(--bg) 100%);
-            color: var(--text-primary);
-            font-family: var(--font-main);
-            min-height: 100vh;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        /* ── Header ────────────────────────────────────────────── */
-        .app-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 1rem 2rem;
-            border-bottom: 1px solid var(--border);
-            background: var(--surface);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            backdrop-filter: blur(12px);
-        }
-        .header-left { display: flex; align-items: center; gap: 1rem; }
-        .back-home {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 0.85rem;
-            font-weight: 400;
-            padding: 0.35rem 0.75rem;
-            border-radius: var(--radius);
-            border: 1px solid var(--border);
-            transition: var(--transition);
-        }
-        .back-home:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.15); }
-        .header-title { display: flex; align-items: center; gap: 0.6rem; }
-        .header-title .icon { font-size: 1.5rem; }
-        .header-title h1 { font-size: 1.2rem; font-weight: 600; letter-spacing: -0.02em; }
-        .header-title .tagline { color: var(--text-secondary); font-size: 0.8rem; font-weight: 300; margin-left: 0.5rem; }
-
-        /* ── Dashboard View ────────────────────────────────────── */
-        .dashboard-view {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 3rem 2rem;
-        }
-        .dashboard-view.hidden { display: none; }
-
-        .dashboard-hero { text-align: center; padding: 4rem 2rem; }
-        .hero-icon { font-size: 4rem; margin-bottom: 1.5rem; opacity: 0.9; }
-        .hero-title { font-size: 1.8rem; font-weight: 600; margin-bottom: 0.5rem; }
-        .hero-subtitle { color: var(--text-secondary); font-size: 1rem; max-width: 480px; margin: 0 auto 2.5rem; line-height: 1.5; }
-
-        .btn-create {
-            display: inline-flex; align-items: center; gap: 0.6rem;
-            background: var(--accent); color: #fff; border: none;
-            padding: 0.9rem 2rem; border-radius: var(--radius);
-            font-family: var(--font-main); font-size: 1rem; font-weight: 600;
-            cursor: pointer; transition: var(--transition); letter-spacing: -0.01em;
-        }
-        .btn-create:hover { background: var(--accent-hover); transform: translateY(-1px); }
-        .btn-create .plus { font-size: 1.3rem; font-weight: 300; }
-
-        .recent-section { margin-top: 4rem; }
-        .recent-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
-        .recent-header h2 { font-size: 1.1rem; font-weight: 600; }
-        .recent-empty {
-            text-align: center; padding: 3rem 2rem;
-            background: var(--surface); border: 1px dashed var(--border);
-            border-radius: var(--radius-lg); color: var(--text-muted); font-size: 0.9rem;
-        }
-
-        /* ── Form View ─────────────────────────────────────────── */
-        .form-view {
-            max-width: 1440px;
-            margin: 0 auto;
-            padding: 1.5rem clamp(1.25rem, 3vw, 2.5rem) 6rem;
-        }
-        .form-view.hidden { display: none; }
-
-        .form-top-bar {
-            display: flex;
-            align-items: flex-start;
-            gap: 1rem;
-            margin-bottom: 1.75rem;
-        }
-        .form-top-copy {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            margin-top: 0.35rem;
-            max-width: 54ch;
-            line-height: 1.5;
-        }
-        .btn-back-dash {
-            display: inline-flex; align-items: center; gap: 0.4rem;
-            background: none; border: 1px solid var(--border);
-            color: var(--text-secondary); padding: 0.4rem 0.9rem;
-            border-radius: var(--radius); font-family: var(--font-main);
-            font-size: 0.85rem; cursor: pointer; transition: var(--transition);
-        }
-        .btn-back-dash:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.15); }
-        .form-top-title { font-size: 1.3rem; font-weight: 600; }
-
-        /* ── 2-Column Dashboard Grid ───────────────────────────── */
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 1.5rem;
-            align-items: start;
-        }
-        .span-full { grid-column: 1 / -1; }
-
-        /* ── Form Sections (cards) ─────────────────────────────── */
-        .form-section {
-            background:
-                linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0)) border-box,
-                var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 1.5rem;
-            box-shadow: 0 24px 48px rgba(3, 6, 12, 0.22);
-        }
-        .hidden-section { display: none !important; }
-
-        .section-header {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 1rem;
-            margin-bottom: 1rem;
-            padding-bottom: 0.85rem;
-            border-bottom: 1px solid var(--border);
-        }
-        .section-title {
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            color: var(--accent);
-            margin-bottom: 0.35rem;
-        }
-        .section-copy {
-            color: var(--text-secondary);
-            font-size: 0.78rem;
-            line-height: 1.45;
-            width: 100%;
-            max-width: none;
-        }
-
-        /* ── Form Fields ───────────────────────────────────────── */
-        .field-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.85rem 1.25rem;
-        }
-        .field-grid .full-width { grid-column: 1 / -1; }
-        .field-grid.cols-1 { grid-template-columns: 1fr; }
-        .field-grid.compact { gap: 0.75rem; }
-
-        .field-group { display: flex; flex-direction: column; gap: 0.3rem; }
-        .field-group label {
-            font-size: 0.75rem; font-weight: 500; color: var(--text-secondary);
-        }
-        .field-group label .req { color: var(--accent); margin-left: 2px; }
-
-        .field-group input,
-        .field-group select,
-        .field-group textarea {
-            background: var(--surface-raised);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 0.5rem 0.7rem;
-            color: var(--text-primary);
-            font-family: var(--font-main);
-            font-size: 0.85rem;
-            outline: none;
-            transition: var(--transition);
-            width: 100%;
-        }
-        .field-group input:focus,
-        .field-group select:focus,
-        .field-group textarea:focus {
-            border-color: var(--border-focus);
-            box-shadow: 0 0 0 3px var(--accent-glow);
-        }
-        .field-group input.invalid,
-        .field-group select.invalid,
-        .field-group textarea.invalid {
-            border-color: var(--danger);
-            box-shadow: 0 0 0 3px var(--danger-bg);
-        }
-        .field-group textarea { resize: vertical; min-height: 70px; }
-        .field-group select { cursor: pointer; }
-        .field-error { font-size: 0.7rem; color: var(--danger); min-height: 0.9em; }
-        .notes-area { min-height: 188px; }
-        .embedded-section {
-            margin-top: 1.25rem;
-            padding-top: 1.1rem;
-            border-top: 1px solid var(--border);
-        }
-        .embedded-section-title {
-            font-size: 0.72rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            color: var(--accent);
-            margin-bottom: 0.8rem;
-        }
-        .nested-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 1rem;
-        }
-        .sub-section-card {
-            background: var(--surface-raised);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 1rem;
-        }
-        .sub-section-title {
-            font-size: 0.78rem;
-            font-weight: 600;
-            letter-spacing: 0.04em;
-            text-transform: uppercase;
-            color: var(--text-primary);
-            margin-bottom: 0.85rem;
-        }
-        .gateway-stack {
-            display: grid;
-            gap: 0.85rem;
-        }
-        .gateway-group {
-            display: grid;
-            gap: 0.45rem;
-        }
-        .gateway-title {
-            font-size: 0.72rem;
-            font-weight: 600;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-            color: var(--text-secondary);
-        }
-        .inline-option-panel {
-            margin-top: 0.35rem;
-            padding: 0.9rem;
-            background: rgba(255,255,255,0.02);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-        }
-
-        /* ── Type Selector ─────────────────────────────────────── */
-        .type-selector { display: flex; gap: 0.75rem; }
-        .type-option {
-            flex: 1; padding: 1rem;
-            background: var(--surface-raised); border: 2px solid var(--border);
-            border-radius: var(--radius-lg); text-align: center;
-            cursor: pointer; transition: var(--transition);
-        }
-        .type-option:hover { border-color: rgba(255,255,255,0.15); }
-        .type-option.selected { border-color: var(--accent); background: var(--accent-glow); }
-        .type-option .type-icon { font-size: 1.6rem; margin-bottom: 0.3rem; }
-        .type-option .type-label { font-weight: 600; font-size: 0.9rem; }
-        .type-option .type-desc { font-size: 0.72rem; color: var(--text-secondary); margin-top: 0.15rem; }
-
-        /* ── Checkbox Grid ─────────────────────────────────────── */
-        .checkbox-grid { display: grid; grid-template-columns: 1fr; gap: 0.5rem; }
-        .checkbox-item {
-            display: flex; align-items: center; gap: 0.5rem;
-            padding: 0.5rem 0.65rem;
-            background: var(--surface-raised); border: 1px solid var(--border);
-            border-radius: var(--radius); cursor: pointer;
-            transition: var(--transition); user-select: none;
-        }
-        .checkbox-item:hover { border-color: rgba(255,255,255,0.15); }
-        .checkbox-item.checked { border-color: var(--accent); background: var(--accent-glow); }
-        .checkbox-item input[type="checkbox"] { display: none; }
-        .check-box {
-            width: 16px; height: 16px;
-            border: 2px solid var(--text-muted); border-radius: 3px;
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0; transition: var(--transition);
-        }
-        .checkbox-item.checked .check-box { background: var(--accent); border-color: var(--accent); }
-        .check-box svg { display: none; width: 10px; height: 10px; }
-        .checkbox-item.checked .check-box svg { display: block; }
-        .check-label { font-size: 0.8rem; }
-
-        /* ── Toggle ────────────────────────────────────────────── */
-        .toggle-row {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 0.6rem 0.7rem;
-            background: var(--surface-raised); border: 1px solid var(--border);
-            border-radius: var(--radius);
-        }
-        .toggle-label { font-size: 0.8rem; }
-        .toggle-label .req { color: var(--accent); margin-left: 2px; }
-        .toggle-switch {
-            width: 40px; height: 22px;
-            background: var(--text-muted); border-radius: 11px;
-            position: relative; cursor: pointer; transition: var(--transition);
-        }
-        .toggle-switch.active { background: var(--accent); }
-        .toggle-switch::after {
-            content: ''; position: absolute; top: 3px; left: 3px;
-            width: 16px; height: 16px; background: #fff;
-            border-radius: 50%; transition: var(--transition);
-        }
-        .toggle-switch.active::after { left: 21px; }
-
-        /* ── Submit Area ───────────────────────────────────────── */
-        .submit-area {
-            position: fixed; bottom: 0; left: 0; right: 0;
-            background: var(--surface); border-top: 1px solid var(--border);
-            padding: 0.85rem 2rem;
-            display: flex; justify-content: center; gap: 1rem;
-            backdrop-filter: blur(12px); z-index: 99;
-        }
-        .submit-area.hidden { display: none; }
-
-        .btn-submit {
-            display: inline-flex; align-items: center; gap: 0.5rem;
-            background: var(--accent); color: #fff; border: none;
-            padding: 0.7rem 2.5rem; border-radius: var(--radius);
-            font-family: var(--font-main); font-size: 0.9rem; font-weight: 600;
-            cursor: pointer; transition: var(--transition);
-        }
-        .btn-submit:hover:not(:disabled) { background: var(--accent-hover); }
-        .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
-
-        .btn-cancel {
-            background: none; border: 1px solid var(--border);
-            color: var(--text-secondary); padding: 0.7rem 1.5rem;
-            border-radius: var(--radius); font-family: var(--font-main);
-            font-size: 0.85rem; cursor: pointer; transition: var(--transition);
-        }
-        .btn-cancel:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.15); }
-
-        /* ── Success Overlay ───────────────────────────────────── */
-        .success-overlay {
-            position: fixed; inset: 0;
-            background: rgba(12,14,20,0.92);
-            display: flex; align-items: center; justify-content: center;
-            z-index: 200; backdrop-filter: blur(6px);
-        }
-        .success-overlay.hidden { display: none; }
-        .success-card {
-            background: var(--surface); border: 1px solid var(--border);
-            border-radius: var(--radius-lg); padding: 3rem; text-align: center; max-width: 420px;
-        }
-        .success-icon { font-size: 3.5rem; margin-bottom: 1rem; }
-        .success-title { font-size: 1.3rem; font-weight: 600; margin-bottom: 0.5rem; }
-        .success-msg { color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5; margin-bottom: 2rem; }
-        .btn-new {
-            background: var(--accent); color: #fff; border: none;
-            padding: 0.7rem 1.8rem; border-radius: var(--radius);
-            font-family: var(--font-main); font-size: 0.9rem; font-weight: 600;
-            cursor: pointer; transition: var(--transition);
-        }
-        .btn-new:hover { background: var(--accent-hover); }
-
-        /* ── Spinner ───────────────────────────────────────────── */
-        .spinner {
-            width: 18px; height: 18px;
-            border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
-            border-radius: 50%; animation: spin 0.6s linear infinite;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* ── Responsive ────────────────────────────────────────── */
-        @media (max-width: 900px) {
-            .form-grid { grid-template-columns: 1fr; }
-            .type-selector { flex-direction: column; }
-            .section-header { flex-direction: column; }
-            .form-top-bar { flex-direction: column; }
-            .nested-grid { grid-template-columns: 1fr; }
-        }
-
-        .app-header,
-        .submit-area,
-        .success-card,
-        .recent-empty,
-        .form-section,
-        .sub-section-card {
-            background: var(--surface);
-        }
-
-        .back-home:hover,
-        .btn-back-dash:hover,
-        .btn-cancel:hover,
-        .type-option:hover,
-        .checkbox-item:hover {
-            border-color: rgba(15,23,42,0.16);
-            background: rgba(15,23,42,0.04);
-        }
-
-        .form-section {
-            box-shadow: 0 24px 48px rgba(15,23,42,0.08);
-        }
-
-        .field-group input,
-        .field-group select,
-        .field-group textarea,
-        .toggle-row,
-        .checkbox-item,
-        .type-option,
-        .inline-option-panel {
-            background: #f8fbff;
-        }
-
-        .success-overlay {
-            background: rgba(241,245,249,0.82);
-        }
-
-        .spinner {
-            border-color: rgba(15,23,42,0.18);
-            border-top-color: #fff;
-        }
-    </style>
+    <link rel="stylesheet" href="./index.css" />
 </head>
 <body>
 
@@ -470,20 +27,16 @@
         <div class="hero-icon">&#128640;</div>
         <h2 class="hero-title">Solicitudes de Eventos</h2>
         <p class="hero-subtitle">Carga solicitudes de creacion de eventos para que OPS los publique en la plataforma.</p>
-        <button class="btn-create" onclick="showForm()">
+        <button class="btn-create" type="button">
             <span class="plus">+</span> Cargar nuevo evento
         </button>
-    </div>
-    <div class="recent-section">
-        <div class="recent-header"><h2>Solicitudes recientes</h2></div>
-        <div class="recent-empty">Las solicitudes enviadas apareceran aqui en futuras versiones.</div>
     </div>
 </div>
 
 <!-- ── Form View ───────────────────────────────────────────────── -->
 <div id="formView" class="form-view hidden">
     <div class="form-top-bar">
-        <button class="btn-back-dash" onclick="showDashboard()">&#8592; Volver</button>
+        <button class="btn-back-dash" type="button">&#8592; Volver</button>
         <div>
             <h2 class="form-top-title">Nueva Solicitud de Evento</h2>
             <p class="form-top-copy">La carga ahora se distribuye en bloques mas compactos para aprovechar el ancho completo sin estirar los mismos campos.</p>
@@ -501,13 +54,13 @@
                         <p class="section-copy">Define el formato de la solicitud y deja identificado al responsable comercial desde el inicio.</p>
                     </div>
                 </div>
-                <div class="type-selector" style="margin-bottom: 1rem;">
-                    <div class="type-option selected" data-type="PARTIDO" onclick="selectType('PARTIDO')">
+                <div class="type-selector type-selector-spaced">
+                    <div class="type-option selected" data-type="PARTIDO">
                         <div class="type-icon">&#9917;</div>
                         <div class="type-label">Partido</div>
                         <div class="type-desc">Evento de un solo partido</div>
                     </div>
-                    <div class="type-option" data-type="ABONO" onclick="selectType('ABONO')">
+                    <div class="type-option" data-type="ABONO">
                         <div class="type-icon">&#127915;</div>
                         <div class="type-label">Abono</div>
                         <div class="type-desc">Paquete de multiples eventos</div>
@@ -528,6 +81,16 @@
                         <label>Nombre del Evento/Abono <span class="req">*</span></label>
                         <input type="text" id="nombreEvento" placeholder="Ej: Jornada 5 vs America" required />
                         <div class="field-error" data-for="nombreEvento"></div>
+                    </div>
+                    <div class="field-group">
+                        <label>Organizador <span class="req">*</span></label>
+                        <input type="text" id="organizador" placeholder="Ej: Club Santos Laguna" required />
+                        <div class="field-error" data-for="organizador"></div>
+                    </div>
+                    <div class="field-group">
+                        <label>ODE <span class="req">*</span></label>
+                        <input type="text" id="ode" placeholder="Ej: CSL" maxlength="3" autocapitalize="characters" spellcheck="false" required />
+                        <div class="field-error" data-for="ode"></div>
                     </div>
                 </div>
             </div>
@@ -556,8 +119,8 @@
                         <div class="field-error" data-for="rival"></div>
                     </div>
                     <div class="field-group">
-                        <label>Fecha y Hora del Evento <span class="req">*</span></label>
-                        <input type="datetime-local" id="fechaHoraEvento" />
+                        <label>Fecha del Evento <span class="req">*</span></label>
+                        <input type="date" id="fechaHoraEvento" />
                         <div class="field-error" data-for="fechaHoraEvento"></div>
                     </div>
                     <div id="stadiumHostPartido">
@@ -573,8 +136,8 @@
                         <div class="embedded-section-title">Informacion General</div>
                         <div class="field-grid">
                             <div class="field-group">
-                                <label>Fecha y Hora de Publicacion <span class="req">*</span></label>
-                                <input type="datetime-local" id="fechaPublicacion" />
+                                <label>Fecha de Encendido <span class="req">*</span></label>
+                                <input type="date" id="fechaPublicacion" />
                                 <div class="field-error" data-for="fechaPublicacion"></div>
                             </div>
                             <div class="field-group">
@@ -639,55 +202,55 @@
                         <p class="section-copy">Configura los medios habilitados para fans y asesores, agrupados por gateway para que la lectura sea mas clara.</p>
                     </div>
                 </div>
-                <div class="nested-grid">
-                    <div class="sub-section-card">
+                <div class="payment-layout">
+                    <div class="payment-row">
                         <div class="sub-section-title">Metodos de Pago - Fans</div>
-                        <div class="gateway-stack" id="mediosFans">
-                            <div class="gateway-group">
+                        <div class="gateway-columns gateway-columns-fans" id="mediosFans">
+                            <div class="gateway-group gateway-card gateway-card-mp">
                                 <div class="gateway-title">Mercado Pago</div>
                                 <label class="checkbox-item" data-key="mp_cash">
                                     <input type="checkbox" /><span class="check-box"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                                    <span class="check-label">Cash</span>
+                                    <span class="check-label"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="payment-option-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 15h-3a1 1 0 0 1 -1 -1v-8a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v3" /><path d="M7 10a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v8a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1l0 -8" /><path d="M12 14a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /></svg>Cash</span>
                                 </label>
                                 <label class="checkbox-item" data-key="mp_tarjetas">
                                     <input type="checkbox" /><span class="check-box"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                                    <span class="check-label">Tarjeta</span>
+                                    <span class="check-label"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="payment-option-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 8a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3l0 -8" /><path d="M3 10l18 0" /><path d="M7 15l.01 0" /><path d="M11 15l2 0" /></svg>Tarjeta</span>
                                 </label>
                                 <label class="checkbox-item" data-key="mp_transferencia">
                                     <input type="checkbox" /><span class="check-box"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                                    <span class="check-label">Transferencia</span>
+                                    <span class="check-label"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="payment-option-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 21l18 0" /><path d="M3 10l18 0" /><path d="M5 6l7 -3l7 3" /><path d="M4 10l0 11" /><path d="M20 10l0 11" /><path d="M8 14l0 3" /><path d="M12 14l0 3" /><path d="M16 14l0 3" /></svg>Transferencia</span>
                                 </label>
                             </div>
-                            <div class="gateway-group">
+                            <div class="gateway-group gateway-card gateway-card-adyen">
                                 <div class="gateway-title">Adyen</div>
                                 <label class="checkbox-item" data-key="adyen_tarjeta">
                                     <input type="checkbox" /><span class="check-box"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                                    <span class="check-label">Tarjeta</span>
+                                    <span class="check-label"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="payment-option-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 8a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3l0 -8" /><path d="M3 10l18 0" /><path d="M7 15l.01 0" /><path d="M11 15l2 0" /></svg>Tarjeta</span>
                                 </label>
                             </div>
-                            <div class="gateway-group">
+                            <div class="gateway-group gateway-card gateway-card-banorte">
                                 <div class="gateway-title">Banorte</div>
                                 <label class="checkbox-item" data-key="banorte_tarjeta">
                                     <input type="checkbox" /><span class="check-box"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                                    <span class="check-label">Tarjeta</span>
+                                    <span class="check-label"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="payment-option-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 8a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3l0 -8" /><path d="M3 10l18 0" /><path d="M7 15l.01 0" /><path d="M11 15l2 0" /></svg>Tarjeta</span>
                                 </label>
                             </div>
-                            <div class="gateway-group">
+                            <div class="gateway-group gateway-card gateway-card-fanki">
                                 <div class="gateway-title">Fanki</div>
                                 <label class="checkbox-item" data-key="tarjeta_fanki">
                                     <input type="checkbox" /><span class="check-box"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                                    <span class="check-label">Tarjeta Fanki</span>
+                                    <span class="check-label"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="payment-option-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 8a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3l0 -8" /><path d="M3 10l18 0" /><path d="M7 15l.01 0" /><path d="M11 15l2 0" /></svg>Tarjeta Fanki</span>
                                 </label>
                                 <label class="checkbox-item" data-key="fanki_cash">
                                     <input type="checkbox" /><span class="check-box"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                                    <span class="check-label">Fanki Cash</span>
+                                    <span class="check-label"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="payment-option-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M17 8v-3a1 1 0 0 0 -1 -1h-10a2 2 0 0 0 0 4h12a1 1 0 0 1 1 1v3m0 4v3a1 1 0 0 1 -1 1h-12a2 2 0 0 1 -2 -2v-12" /><path d="M20 12v4h-4a2 2 0 0 1 0 -4h4" /></svg>Fanki Cash</span>
                                 </label>
                             </div>
-                            <div class="gateway-group">
+                            <div class="gateway-group gateway-card gateway-card-paguitos">
                                 <div class="gateway-title">Paguitos</div>
                                 <label class="checkbox-item" data-key="paguitos">
                                     <input type="checkbox" /><span class="check-box"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                                    <span class="check-label">Cuotas sin tarjeta</span>
+                                    <span class="check-label"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="payment-option-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16l-3 -2l-2 2l-2 -2l-2 2l-2 -2l-3 2m4 -14h6m-6 4h6m-2 4h2" /></svg>Cuotas sin tarjeta</span>
                                 </label>
                                 <div class="inline-option-panel hidden-section" id="secCuotas">
                                     <div class="embedded-section-title">Configuracion de Cuotas</div>
@@ -707,28 +270,28 @@
                             </div>
                         </div>
                     </div>
-                    <div class="sub-section-card">
+                    <div class="payment-row">
                         <div class="sub-section-title">Metodos de Pago - Asesores</div>
-                        <div class="gateway-stack" id="mediosAsesores">
-                            <div class="gateway-group">
+                        <div class="gateway-columns gateway-columns-advisors" id="mediosAsesores">
+                            <div class="gateway-group gateway-card gateway-card-mp">
                                 <div class="gateway-title">Mercado Pago</div>
                                 <label class="checkbox-item" data-key="link_mercado">
                                     <input type="checkbox" /><span class="check-box"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                                    <span class="check-label">Link de Pago</span>
+                                    <span class="check-label"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="payment-option-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 15l6 -6" /><path d="M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464" /><path d="M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463" /></svg>Link de Pago</span>
                                 </label>
                             </div>
-                            <div class="gateway-group">
+                            <div class="gateway-group gateway-card gateway-card-banorte">
                                 <div class="gateway-title">Banorte</div>
                                 <label class="checkbox-item" data-key="link_banorte">
                                     <input type="checkbox" /><span class="check-box"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                                    <span class="check-label">Link de Pago</span>
+                                    <span class="check-label"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="payment-option-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 15l6 -6" /><path d="M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464" /><path d="M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463" /></svg>Link de Pago</span>
                                 </label>
                             </div>
-                            <div class="gateway-group">
+                            <div class="gateway-group gateway-card gateway-card-adyen">
                                 <div class="gateway-title">Adyen</div>
                                 <label class="checkbox-item" data-key="link_adyen">
                                     <input type="checkbox" /><span class="check-box"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                                    <span class="check-label">Link de Pago</span>
+                                    <span class="check-label"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="payment-option-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 15l6 -6" /><path d="M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464" /><path d="M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463" /></svg>Link de Pago</span>
                                 </label>
                             </div>
                         </div>
@@ -743,9 +306,9 @@
                         <p class="section-copy">Reglas comerciales adicionales para segmentar o restringir disponibilidad.</p>
                     </div>
                 </div>
-                <div class="toggle-row" style="margin-bottom: 0.75rem;">
+                <div class="toggle-row toggle-row-spaced">
                     <span class="toggle-label">Exclusividad por BINes <span class="req">*</span></span>
-                    <div class="toggle-switch" id="toggleBines" onclick="toggleSwitch(this)"></div>
+                    <div class="toggle-switch" id="toggleBines"></div>
                 </div>
                 <div class="hidden-section" id="secBines">
                     <div class="field-group">
@@ -767,7 +330,7 @@
                 <div class="field-grid">
                     <div class="field-group">
                         <label>Dias de espera para pagos en efectivo <span class="req">*</span></label>
-                        <input type="number" id="cashPaymentDueDays" min="0" placeholder="Ej: 3" />
+                        <input type="number" id="cashPaymentDueDays" min="2" placeholder="Ej: 3" />
                         <div class="field-error" data-for="cashPaymentDueDays"></div>
                     </div>
                 </div>
@@ -799,44 +362,6 @@
                         </select>
                         <div class="field-error" data-for="connectionMode"></div>
                     </div>
-                    <div class="field-group full-width">
-                        <label>Detalles del evento y Politicas de acceso <span class="req">*</span></label>
-                        <input type="url" id="linkPoliticas" placeholder="https://..." />
-                        <div class="field-error" data-for="linkPoliticas"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ══════════ ROW 5 ══════════ -->
-            <div class="form-section hidden-section" id="secDocsPartido">
-                <div class="section-header">
-                    <div>
-                        <div class="section-title">Documentos Adicionales</div>
-                        <p class="section-copy">Adjunta links complementarios que OPS deba considerar para el partido.</p>
-                    </div>
-                </div>
-                <div class="field-group">
-                    <label>Accesos extras</label>
-                    <input type="url" id="linkAccesosExtras" placeholder="https://..." />
-                </div>
-            </div>
-
-            <div class="form-section hidden-section" id="secDocsAbono">
-                <div class="section-header">
-                    <div>
-                        <div class="section-title">Documentos Adicionales</div>
-                        <p class="section-copy">Espacio para links de precios y cortesia asociados al abono.</p>
-                    </div>
-                </div>
-                <div class="field-grid">
-                    <div class="field-group">
-                        <label>Precios Preferenciales</label>
-                        <input type="url" id="linkPreciosPreferenciales" placeholder="https://..." />
-                    </div>
-                    <div class="field-group">
-                        <label>Cortesias</label>
-                        <input type="url" id="linkCortesias" placeholder="https://..." />
-                    </div>
                 </div>
             </div>
 
@@ -859,8 +384,8 @@
 
 <!-- ── Submit Bar ───────────────────────────────────────────── -->
 <div id="submitBar" class="submit-area hidden">
-    <button type="button" class="btn-cancel" onclick="showDashboard()">Cancelar</button>
-    <button type="button" class="btn-submit" id="btnSubmit" onclick="submitForm()">
+    <button type="button" class="btn-cancel">Cancelar</button>
+    <button type="button" class="btn-submit" id="btnSubmit">
         Enviar Solicitud
     </button>
 </div>
@@ -871,233 +396,14 @@
         <div class="success-icon">&#9989;</div>
         <h3 class="success-title">Solicitud Enviada</h3>
         <p class="success-msg" id="successMsg">Tu solicitud fue recibida correctamente. OPS la procesara a la brevedad.</p>
-        <button class="btn-new" onclick="resetAndGoHome()">Volver al inicio</button>
+        <div class="success-summary">
+            <div class="success-summary-title">Resumen para OPS</div>
+            <pre class="success-summary-body" id="successSummary"></pre>
+        </div>
+        <button class="btn-new" type="button">Crear otro evento</button>
     </div>
 </div>
 
-<script>
-/* ================================================================
-   Event Request Form — Logic
-   ================================================================ */
-
-const WEBHOOK_URL = '';
-let selectedType = 'PARTIDO';
-
-// ── View Navigation ─────────────────────────────────────────────
-function showForm() {
-    document.getElementById('dashboardView').classList.add('hidden');
-    document.getElementById('formView').classList.remove('hidden');
-    document.getElementById('submitBar').classList.remove('hidden');
-    window.scrollTo(0, 0);
-}
-function showDashboard() {
-    document.getElementById('formView').classList.add('hidden');
-    document.getElementById('submitBar').classList.add('hidden');
-    document.getElementById('dashboardView').classList.remove('hidden');
-    window.scrollTo(0, 0);
-}
-function resetAndGoHome() {
-    document.getElementById('successOverlay').classList.add('hidden');
-    document.getElementById('eventForm').reset();
-    document.querySelectorAll('.checkbox-item').forEach(c => c.classList.remove('checked'));
-    document.querySelectorAll('.toggle-switch').forEach(t => t.classList.remove('active'));
-    hideConditionalSections();
-    selectType('PARTIDO');
-    clearErrors();
-    showDashboard();
-}
-
-// ── Type Selector ───────────────────────────────────────────────
-function selectType(type) {
-    selectedType = type;
-    document.querySelectorAll('.type-option').forEach(o => {
-        o.classList.toggle('selected', o.dataset.type === type);
-    });
-    document.getElementById('typeError').textContent = '';
-    toggle('secPartido', type === 'PARTIDO');
-    toggle('secDocsPartido', type === 'PARTIDO');
-    toggle('secAbono', type === 'ABONO');
-    toggle('secDocsAbono', type === 'ABONO');
-    placeSharedStadiumField(type);
-    placeSharedGeneralFields(type);
-}
-function hideConditionalSections() {
-    ['secPartido','secAbono','secDocsPartido','secDocsAbono','secCuotas','secBines'].forEach(id => toggle(id, false));
-}
-function toggle(id, show) {
-    const el = document.getElementById(id);
-    if (el) el.classList.toggle('hidden-section', !show);
-}
-function placeSharedGeneralFields(type) {
-    const shared = document.getElementById('sharedGeneralFields');
-    const target = document.getElementById(type === 'ABONO' ? 'generalFieldsHostAbono' : 'generalFieldsHostPartido');
-    if (shared && target && shared.parentElement !== target) target.appendChild(shared);
-}
-function placeSharedStadiumField(type) {
-    const shared = document.getElementById('sharedStadiumField');
-    const target = document.getElementById(type === 'ABONO' ? 'stadiumHostAbono' : 'stadiumHostPartido');
-    if (shared && target && shared.parentElement !== target) target.appendChild(shared);
-}
-
-// ── Checkbox Items ──────────────────────────────────────────────
-document.querySelectorAll('.checkbox-item').forEach(item => {
-    item.addEventListener('click', () => {
-        const cb = item.querySelector('input[type="checkbox"]');
-        cb.checked = !cb.checked;
-        item.classList.toggle('checked', cb.checked);
-        if (item.dataset.key === 'paguitos') toggle('secCuotas', cb.checked);
-    });
-});
-
-// ── Toggle Switch ───────────────────────────────────────────────
-function toggleSwitch(el) {
-    el.classList.toggle('active');
-    if (el.id === 'toggleBines') toggle('secBines', el.classList.contains('active'));
-}
-
-// ── Auto-calculate abono event count ────────────────────────────
-const codigosAbono = document.getElementById('codigosEventosAbono');
-if (codigosAbono) {
-    codigosAbono.addEventListener('input', () => {
-        const val = codigosAbono.value.trim();
-        const countEl = document.getElementById('cantidadEventosAbono');
-        if (!val || val.toLowerCase() === 'pendiente') { countEl.value = ''; }
-        else { countEl.value = val.split(',').map(c => c.trim()).filter(c => c.length > 0).length; }
-    });
-}
-
-// ── Validation ──────────────────────────────────────────────────
-function clearErrors() {
-    document.querySelectorAll('.field-error').forEach(e => e.textContent = '');
-    document.querySelectorAll('.invalid').forEach(e => e.classList.remove('invalid'));
-}
-function setError(fieldId, msg) {
-    const errEl = document.querySelector(`.field-error[data-for="${fieldId}"]`);
-    if (errEl) errEl.textContent = msg;
-    const input = document.getElementById(fieldId);
-    if (input) input.classList.add('invalid');
-}
-function validateForm() {
-    clearErrors();
-    let valid = true;
-    if (!selectedType) { document.getElementById('typeError').textContent = 'Selecciona un tipo de evento'; valid = false; }
-
-    const req = [
-        { id: 'cargadoPor', label: 'Cargado por' },
-        { id: 'nombreEvento', label: 'Nombre del Evento' },
-        { id: 'fechaPublicacion', label: 'Fecha de Publicacion' },
-        { id: 'modoEncendido', label: 'Modo de Encendido' },
-        { id: 'estadio', label: 'Estadio' },
-        { id: 'maxBoletos', label: 'Max. Boletos' },
-        { id: 'cashPaymentDueDays', label: 'Dias espera cash' },
-        { id: 'qrType', label: 'Tipo de QR' },
-        { id: 'connectionMode', label: 'Tipo de lectura' },
-        { id: 'linkPoliticas', label: 'Link politicas' },
-    ];
-    req.forEach(f => {
-        const val = document.getElementById(f.id)?.value?.trim();
-        if (!val) { setError(f.id, `${f.label} es obligatorio`); valid = false; }
-    });
-
-    if (selectedType === 'PARTIDO') {
-        if (!document.getElementById('countryPartido').value) { setError('countryPartido', 'Pais es obligatorio'); valid = false; }
-        if (!document.getElementById('rival').value.trim()) { setError('rival', 'Rival es obligatorio'); valid = false; }
-        if (!document.getElementById('fechaHoraEvento').value) { setError('fechaHoraEvento', 'Fecha del evento es obligatoria'); valid = false; }
-    }
-    if (selectedType === 'ABONO') {
-        if (!document.getElementById('countryAbono').value) { setError('countryAbono', 'Pais es obligatorio'); valid = false; }
-        if (!document.getElementById('fechaApagadoAbono').value) { setError('fechaApagadoAbono', 'Fecha de apagado es obligatoria'); valid = false; }
-    }
-
-    const paguitos = document.querySelector('.checkbox-item[data-key="paguitos"]');
-    if (paguitos && paguitos.classList.contains('checked')) {
-        if (!document.getElementById('cuotasCantidad').value) { setError('cuotasCantidad', 'Cantidad de cuotas es obligatoria'); valid = false; }
-        if (!document.getElementById('cuotasInteres').value && document.getElementById('cuotasInteres').value !== '0') { setError('cuotasInteres', 'Interes es obligatorio'); valid = false; }
-    }
-    if (document.getElementById('toggleBines').classList.contains('active')) {
-        if (!document.getElementById('listadoBines').value.trim()) { setError('listadoBines', 'Listado de BINes es obligatorio'); valid = false; }
-    }
-
-    const linkPol = document.getElementById('linkPoliticas').value.trim();
-    if (linkPol && !isValidUrl(linkPol)) { setError('linkPoliticas', 'Ingresa una URL valida (https://...)'); valid = false; }
-
-    if (!valid) {
-        const first = document.querySelector('.invalid, .field-error:not(:empty)');
-        if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-    return valid;
-}
-function isValidUrl(str) { try { const u = new URL(str); return u.protocol === 'http:' || u.protocol === 'https:'; } catch { return false; } }
-
-// ── Collect & Build ─────────────────────────────────────────────
-function collectCheckboxes(containerId) {
-    const obj = {};
-    document.querySelectorAll(`#${containerId} .checkbox-item`).forEach(item => {
-        obj[item.dataset.key] = item.classList.contains('checked');
-    });
-    return obj;
-}
-function buildPayload() {
-    const v = id => document.getElementById(id)?.value?.trim() || null;
-    const n = id => { const val = document.getElementById(id)?.value; return val !== '' && val != null ? Number(val) : null; };
-    return {
-        tipo_evento: selectedType,
-        cargado_por: v('cargadoPor'), nombre_evento: v('nombreEvento'), codigo_evento: v('codigoEvento'),
-        Country: selectedType === 'PARTIDO' ? v('countryPartido') : v('countryAbono'),
-        rival: selectedType === 'PARTIDO' ? v('rival') : null,
-        fecha_hora_evento: selectedType === 'PARTIDO' ? v('fechaHoraEvento') : null,
-        cantidad_eventos_abono: selectedType === 'ABONO' ? n('cantidadEventosAbono') : null,
-        codigos_eventos_abono: selectedType === 'ABONO' ? v('codigosEventosAbono') : null,
-        fecha_apagado_abono: selectedType === 'ABONO' ? v('fechaApagadoAbono') : null,
-        fecha_publicacion: v('fechaPublicacion'), modo_encendido: v('modoEncendido'),
-        estadio: v('estadio'), max_boletos_por_usuario: n('maxBoletos'),
-        medios_pago_fans: collectCheckboxes('mediosFans'),
-        medios_pago_asesores: collectCheckboxes('mediosAsesores'),
-        cuotas_cantidad: n('cuotasCantidad'), cuotas_interes: n('cuotasInteres'),
-        exclusividad_bines: document.getElementById('toggleBines').classList.contains('active'),
-        listado_bines: document.getElementById('toggleBines').classList.contains('active') ? v('listadoBines') : null,
-        cash_payment_due_days: n('cashPaymentDueDays'),
-        qr_type: v('qrType'), connection_mode: v('connectionMode'),
-        link_politicas_acceso: v('linkPoliticas'),
-        link_accesos_extras: selectedType === 'PARTIDO' ? v('linkAccesosExtras') : null,
-        link_precios_preferenciales: selectedType === 'ABONO' ? v('linkPreciosPreferenciales') : null,
-        link_cortesias: selectedType === 'ABONO' ? v('linkCortesias') : null,
-        pedidos_adicionales: v('pedidosAdicionales'),
-        submitted_at: new Date().toISOString(),
-    };
-}
-
-// ── Submit ──────────────────────────────────────────────────────
-async function submitForm() {
-    if (!validateForm()) return;
-    const btn = document.getElementById('btnSubmit');
-    const originalHTML = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span> Enviando...';
-    const payload = buildPayload();
-
-    if (!WEBHOOK_URL) {
-        console.log('Event Request Payload:', payload);
-        btn.disabled = false; btn.innerHTML = originalHTML;
-        showSuccess(payload);
-        return;
-    }
-    try {
-        const res = await fetch(WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        if (!res.ok) throw new Error(`Error ${res.status}`);
-        showSuccess(payload);
-    } catch (err) {
-        alert('Error al enviar la solicitud: ' + err.message + '\nLos datos no se perdieron, intenta de nuevo.');
-    } finally { btn.disabled = false; btn.innerHTML = originalHTML; }
-}
-function showSuccess(payload) {
-    const name = payload.nombre_evento || 'Evento';
-    const tipo = payload.tipo_evento || '';
-    document.getElementById('successMsg').textContent = `La solicitud "${name}" (${tipo}) fue recibida correctamente. OPS la procesara a la brevedad.`;
-    document.getElementById('successOverlay').classList.remove('hidden');
-}
-
-selectType('PARTIDO');
-</script>
+<script type="module" src="./app.js"></script>
 </body>
 </html>

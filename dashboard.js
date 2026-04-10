@@ -60,6 +60,15 @@ const TOOLS = [
         path: 'tools/layout-generator/index.html',
         accentColor: '#06b6d4',
     },
+    {
+        id: 'event-request',
+        name: 'Event Request',
+        subtitle: 'Creación de Eventos',
+        description: 'Dashboard para que los KAMs carguen solicitudes de nuevos eventos y abonos para OPS.',
+        icon: '📋',
+        path: 'tools/event-request/index.html',
+        accentColor: '#10b981',
+    },
 ];
 
 function renderTools() {

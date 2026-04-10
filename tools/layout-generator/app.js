@@ -2,7 +2,7 @@
  * Layout Generator — Fanki Venue Layout Builder
  *
  * Generates JSON layouts for venues in Fanki.
- * Supports CSV import for sections, nested sub-sections, and JSON export.
+ * Supports CSV import for sections, JSON import, nested sub-sections, and JSON/CSV export.
  */
 
 class LayoutGenerator {
@@ -14,6 +14,7 @@ class LayoutGenerator {
       { id: "config", label: "Configuración", icon: "⚙️" },
       { id: "sections", label: "Secciones", icon: "🏟️" },
       { id: "output", label: "JSON Output", icon: "📦" },
+      { id: "csv-output", label: "CSV Output", icon: "🧾" },
     ];
 
     this.config = {
@@ -37,8 +38,6 @@ class LayoutGenerator {
   cacheDOM() {
     this.tabsNav = document.getElementById("tabsNav");
     this.tabContent = document.getElementById("tabContent");
-    this.exportBtn = document.getElementById("exportJson");
-    this.copyBtn = document.getElementById("copyJson");
     this.resetBtn = document.getElementById("resetAll");
     this.modal = document.getElementById("modal");
     this.modalTitle = document.getElementById("modalTitle");
@@ -47,8 +46,6 @@ class LayoutGenerator {
   }
 
   bindEvents() {
-    this.exportBtn.addEventListener("click", () => this.exportJSON());
-    this.copyBtn.addEventListener("click", () => this.copyJSON());
     this.resetBtn.addEventListener("click", () => this.resetAll());
     this.closeModalBtn.addEventListener("click", () => this.closeModal());
     this.modal.addEventListener("click", (e) => {
@@ -94,6 +91,9 @@ class LayoutGenerator {
         break;
       case "output":
         this.renderOutputTab();
+        break;
+      case "csv-output":
+        this.renderCsvOutputTab();
         break;
     }
   }
@@ -206,27 +206,38 @@ class LayoutGenerator {
   /* ═══════════════ SECTIONS TAB ═══════════════ */
 
   renderSectionsTab() {
-    const totalCap = this.sections.reduce((sum, s) => {
-      if (s.children && s.children.length > 0) {
-        return sum + s.children.reduce((cs, c) => cs + (c.capacity || 0), 0);
-      }
-      return sum + (s.capacity || 0);
-    }, 0);
+    const stats = this.getSectionStats();
 
     this.tabContent.innerHTML = `
       <div class="tab-panel active">
-        <div class="csv-zone" id="csvZone">
-          <input type="file" accept=".csv,.tsv,.txt" id="csvFile">
-          <div class="csv-zone-icon">📄</div>
-          <div class="csv-zone-title">Arrastrá un CSV o hacé click para cargar secciones</div>
-          <div class="csv-zone-hint">Columnas: parent, code, name, type, unnumbered, capacity, visibilityScope, color, reseleable, disabled, exclusive</div>
-          <div class="csv-zone-hint" style="margin-top:0.25rem; opacity:0.5;">Si "parent" tiene un código → sub-sección. Si está vacío → sección principal. Padre inexistente se crea automáticamente.</div>
+        <div class="import-grid">
+          <div class="csv-zone" id="csvZone">
+            <input type="file" accept=".csv,.tsv,.txt" id="csvFile">
+            <div class="csv-zone-content">
+              <div class="csv-zone-icon">📄</div>
+              <div class="csv-zone-title">Arrastrá un CSV o hacé click para cargar secciones</div>
+              <div class="csv-zone-hint">Columnas: parent, code, name, type, unnumbered, capacity, visibilityScope, color, reseleable, disabled, exclusive</div>
+              <div class="csv-zone-hint" style="margin-top:0.25rem; opacity:0.5;">Si "parent" tiene un código → sub-sección. Si está vacío → sección principal. Padre inexistente se crea automáticamente.</div>
+            </div>
+          </div>
+
+          <div class="csv-zone" id="jsonZone">
+            <input type="file" accept=".json,application/json" id="jsonFile">
+            <div class="csv-zone-content">
+              <div class="csv-zone-icon">🧩</div>
+              <div class="csv-zone-title">Cargá un JSON o pegá el JSON</div>
+              <div class="csv-zone-hint">Importá un layout existente para editarlo desde este generador.</div>
+              <div class="csv-zone-hint" style="margin-top:0.25rem; opacity:0.5;">Soporta layouts exportados por esta misma herramienta y estructuras padre/sub-sección.</div>
+            </div>
+            <button class="btn btn-secondary btn-sm zone-inline-btn" id="openJsonPaste" type="button">Pegar JSON</button>
+          </div>
         </div>
 
         <div class="sections-toolbar" style="margin-top: 1rem;">
           <div class="sections-stats">
-            <span><strong>${this.sections.length}</strong> secciones</span>
-            <span><strong>${totalCap.toLocaleString()}</strong> capacidad total</span>
+            <span><strong>${stats.sectionCount}</strong> secciones</span>
+            <span><strong>${stats.childCount}</strong> sub-secciones</span>
+            <span><strong>${stats.totalCap.toLocaleString()}</strong> capacidad total</span>
           </div>
           <button class="btn btn-primary btn-sm" id="addSectionBtn">+ Agregar Sección</button>
         </div>
@@ -245,7 +256,7 @@ class LayoutGenerator {
       <div class="empty-state">
         <div class="empty-state-icon">🏟️</div>
         <div class="empty-state-text">No hay secciones cargadas</div>
-        <div class="empty-state-hint">Subí un CSV o agregá secciones manualmente</div>
+        <div class="empty-state-hint">Subí un CSV, importá un JSON o agregá secciones manualmente</div>
       </div>`;
   }
 
@@ -319,6 +330,9 @@ class LayoutGenerator {
   bindCSVZone() {
     const zone = document.getElementById("csvZone");
     const input = document.getElementById("csvFile");
+    const jsonZone = document.getElementById("jsonZone");
+    const jsonInput = document.getElementById("jsonFile");
+    const openJsonPasteBtn = document.getElementById("openJsonPaste");
 
     ["dragenter", "dragover"].forEach((evt) =>
       zone.addEventListener(evt, (e) => {
@@ -337,6 +351,30 @@ class LayoutGenerator {
     input.addEventListener("change", () => {
       if (input.files[0]) this.handleCSV(input.files[0]);
       input.value = "";
+    });
+
+    ["dragenter", "dragover"].forEach((evt) =>
+      jsonZone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        jsonZone.classList.add("drag-over");
+      })
+    );
+    ["dragleave", "drop"].forEach((evt) =>
+      jsonZone.addEventListener(evt, () => jsonZone.classList.remove("drag-over"))
+    );
+    jsonZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      const file = e.dataTransfer.files[0];
+      if (file) this.handleJSONFile(file);
+    });
+    jsonInput.addEventListener("change", () => {
+      if (jsonInput.files[0]) this.handleJSONFile(jsonInput.files[0]);
+      jsonInput.value = "";
+    });
+    openJsonPasteBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.openImportJsonModal();
     });
 
     // Bind table actions via delegation
@@ -433,6 +471,172 @@ class LayoutGenerator {
     reader.readAsText(file);
   }
 
+  handleJSONFile(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        this.importLayoutJSON(e.target.result);
+      } catch (err) {
+        this.toast("Error al importar JSON: " + err.message, "error");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  openImportJsonModal() {
+    this.modalTitle.textContent = "Pegar Layout JSON";
+    this.modalBody.innerHTML = `
+      <div class="modal-form">
+        <div class="form-group">
+          <label class="form-label">Layout JSON</label>
+          <textarea class="form-input form-textarea form-textarea-code" id="layoutJsonInput" placeholder='{
+  "code": "LAYOUT_EVENTO",
+  "name": "Venue Name",
+  "sections": []
+}'></textarea>
+          <span class="form-hint">La importación reemplaza la configuración y las secciones cargadas actualmente.</span>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary btn-sm" id="layoutJsonCancel" type="button">Cancelar</button>
+          <button class="btn btn-primary btn-sm" id="layoutJsonImport" type="button">Importar JSON</button>
+        </div>
+      </div>`;
+    this.modal.classList.add("open");
+
+    document.getElementById("layoutJsonCancel").addEventListener("click", () => this.closeModal());
+    document.getElementById("layoutJsonImport").addEventListener("click", () => {
+      const raw = document.getElementById("layoutJsonInput").value.trim();
+      if (!raw) return this.toast("Pegá un JSON antes de importar", "error");
+
+      try {
+        this.importLayoutJSON(raw);
+      } catch (err) {
+        this.toast("Error al importar JSON: " + err.message, "error");
+      }
+    });
+  }
+
+  importLayoutJSON(raw) {
+    const parsed = JSON.parse(raw);
+    const normalized = this.normalizeImportedLayout(parsed);
+
+    if (this.hasExistingData()) {
+      const ok = confirm("La importación va a reemplazar la configuración y las secciones actuales. ¿Continuar?");
+      if (!ok) return;
+    }
+
+    this.config = normalized.config;
+    this.sections = normalized.sections;
+    this.activeTab = normalized.sections.length > 0 ? "sections" : "config";
+    this.modal.classList.remove("open");
+    this.save();
+    this.renderTabs();
+    this.renderActiveTab();
+
+    const stats = this.getSectionStats();
+    this.toast(
+      `${stats.sectionCount} secciones y ${stats.childCount} sub-secciones importadas`,
+      "success",
+    );
+  }
+
+  normalizeImportedLayout(layout) {
+    if (!layout || typeof layout !== "object" || Array.isArray(layout)) {
+      throw new Error("El archivo no contiene un objeto JSON válido.");
+    }
+
+    const sourceSections = Array.isArray(layout.sections) ? layout.sections : [];
+    const sections = sourceSections.map((section, idx) =>
+      this.normalizeImportedSection(section, idx)
+    );
+
+    if (
+      sections.length === 0 &&
+      !this.normalizeText(layout.code) &&
+      !this.normalizeText(layout.name)
+    ) {
+      throw new Error("No se encontró un layout compatible para importar.");
+    }
+
+    return {
+      config: {
+        name: this.normalizeText(layout.name),
+        code: this.normalizeText(layout.code),
+        maxCapacityByFan: this.normalizeNumber(layout.maxCapacityByFan, 3),
+        image: {
+          small: this.normalizeText(layout.image?.small),
+          medium: this.normalizeText(layout.image?.medium),
+          large: this.normalizeText(layout.image?.large),
+        },
+      },
+      sections,
+    };
+  }
+
+  normalizeImportedSection(section, idx) {
+    if (!section || typeof section !== "object" || Array.isArray(section)) {
+      throw new Error(`La sección ${idx + 1} no tiene un formato válido.`);
+    }
+
+    const parentCode =
+      this.normalizeText(section.code) ||
+      this.autoCode(section.name || `Seccion ${idx + 1}`) ||
+      `SECTION_${idx + 1}`;
+    const parentName = this.normalizeText(section.name) || parentCode;
+    const sourceChildren = Array.isArray(section.sections) ? section.sections : [];
+
+    if (sourceChildren.some((child) => Array.isArray(child?.sections) && child.sections.length > 0)) {
+      throw new Error("Layout Generator soporta hasta un nivel de sub-secciones.");
+    }
+
+    return {
+      code: parentCode,
+      name: parentName,
+      type: this.normalizeText(section.type) || "GRANDSTAND",
+      color: this.normalizeColor(section.color),
+      disabled: this.parseBool(section.disabled),
+      exclusive: this.parseBool(section.exclusive),
+      visibilityScope: this.normalizeVisibilityScope(section.visibilityScope),
+      capacity: sourceChildren.length > 0 ? null : this.normalizeOptionalNumber(section.capacity),
+      unnumbered: section.unnumbered == null ? true : this.parseBool(section.unnumbered),
+      reseleable: this.parseBool(section.reseleable),
+      children: sourceChildren.map((child, childIdx) =>
+        this.normalizeImportedChild(child, parentCode, childIdx, section)
+      ),
+    };
+  }
+
+  normalizeImportedChild(child, parentCode, idx, parentSection) {
+    if (!child || typeof child !== "object" || Array.isArray(child)) {
+      throw new Error(`La sub-sección ${idx + 1} de ${parentCode} no tiene un formato válido.`);
+    }
+
+    const rawCode = this.normalizeText(child.code);
+    const codeWithoutParent = rawCode.startsWith(`${parentCode}/`)
+      ? rawCode.slice(parentCode.length + 1)
+      : rawCode;
+    const childCode =
+      codeWithoutParent ||
+      this.autoCode(child.name || `Subseccion ${idx + 1}`) ||
+      `SUB_${idx + 1}`;
+
+    return {
+      code: childCode,
+      name: this.normalizeText(child.name) || childCode,
+      type: this.normalizeText(child.type) || this.normalizeText(parentSection.type) || "GRANDSTAND",
+      color: this.normalizeColor(child.color || parentSection.color),
+      disabled: this.parseBool(child.disabled),
+      exclusive: this.parseBool(child.exclusive),
+      visibilityScope: this.normalizeVisibilityScope(
+        child.visibilityScope,
+        this.normalizeVisibilityScope(parentSection.visibilityScope),
+      ),
+      capacity: this.normalizeOptionalNumber(child.capacity),
+      unnumbered: child.unnumbered == null ? true : this.parseBool(child.unnumbered),
+      reseleable: this.parseBool(child.reseleable),
+    };
+  }
+
   /* ─── CSV Parser ─── */
 
   parseCSV(text) {
@@ -509,6 +713,55 @@ class LayoutGenerator {
     if (val == null) return false;
     const v = String(val).trim().toLowerCase();
     return v === "true" || v === "1" || v === "yes" || v === "si" || v === "sí";
+  }
+
+  normalizeText(val) {
+    if (val == null) return "";
+    return String(val).trim();
+  }
+
+  normalizeNumber(val, fallback = 0) {
+    const parsed = Number(val);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
+  normalizeOptionalNumber(val) {
+    if (val == null || val === "") return null;
+    const parsed = Number(val);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  normalizeColor(val) {
+    const color = this.normalizeText(val);
+    return color || "#FFFFFF";
+  }
+
+  normalizeVisibilityScope(val, fallback = "ALL") {
+    const scope = this.normalizeText(val).toUpperCase();
+    return this.VISIBILITY_SCOPES.includes(scope) ? scope : fallback;
+  }
+
+  hasExistingData() {
+    return Boolean(
+      this.normalizeText(this.config.name) ||
+      this.normalizeText(this.config.code) ||
+      this.sections.length > 0
+    );
+  }
+
+  getSectionStats() {
+    const sectionCount = this.sections.length;
+    const childCount = this.sections.reduce((sum, section) => {
+      return sum + ((section.children || []).length);
+    }, 0);
+    const totalCap = this.sections.reduce((sum, section) => {
+      if (section.children && section.children.length > 0) {
+        return sum + section.children.reduce((childSum, child) => childSum + (child.capacity || 0), 0);
+      }
+      return sum + (section.capacity || 0);
+    }, 0);
+
+    return { sectionCount, childCount, totalCap };
   }
 
   /* ═══════════════ SECTION CRUD ═══════════════ */
@@ -881,25 +1134,85 @@ class LayoutGenerator {
     const json = this.generateJSON();
     const jsonStr = JSON.stringify(json, null, 2);
     const highlighted = this.highlightJSON(jsonStr);
-
-    const sectionCount = this.sections.length;
-    const totalCap = this.sections.reduce((sum, s) => {
-      if (s.children && s.children.length > 0) {
-        return sum + s.children.reduce((cs, c) => cs + (c.capacity || 0), 0);
-      }
-      return sum + (s.capacity || 0);
-    }, 0);
+    const stats = this.getSectionStats();
 
     this.tabContent.innerHTML = `
       <div class="tab-panel active">
         <div class="json-output-wrapper">
           <div class="json-output-header">
-            <span class="json-output-label">JSON Output</span>
-            <span class="json-output-stats">${sectionCount} secciones &middot; ${totalCap.toLocaleString()} cap total &middot; ${(jsonStr.length / 1024).toFixed(1)} KB</span>
+            <div class="output-header-main">
+              <span class="json-output-label">JSON Output</span>
+              <span class="json-output-stats">${stats.sectionCount} secciones &middot; ${stats.childCount} sub-secciones &middot; ${stats.totalCap.toLocaleString()} cap total &middot; ${(jsonStr.length / 1024).toFixed(1)} KB</span>
+            </div>
+            <div class="output-header-actions">
+              <button class="btn btn-secondary btn-sm" id="copyJsonOutput" type="button">📋 Copiar JSON</button>
+              <button class="btn btn-success btn-sm" id="exportJsonOutput" type="button">📦 Exportar .json</button>
+            </div>
           </div>
           <pre class="json-output-pre">${highlighted}</pre>
         </div>
       </div>`;
+
+    document.getElementById("copyJsonOutput").addEventListener("click", () => this.copyJSON());
+    document.getElementById("exportJsonOutput").addEventListener("click", () => this.exportJSON());
+  }
+
+  renderCsvOutputTab() {
+    const rows = this.getCSVOutputRows();
+    const csv = this.generateCSVOutput();
+    const stats = this.getSectionStats();
+    const rowsHTML = rows.length > 0
+      ? rows.map((row) => `
+        <tr>
+          <td class="code-cell">${this.esc(row.parentCode)}</td>
+          <td>${this.esc(row.parentName)}</td>
+          <td class="code-cell">${row.childCode ? this.esc(row.childCode) : '<span class="output-empty">—</span>'}</td>
+          <td>${row.childName ? this.esc(row.childName) : '<span class="output-empty">—</span>'}</td>
+        </tr>`).join("")
+      : `
+        <tr>
+          <td colspan="4" class="output-empty-cell">No hay filas para exportar todavía.</td>
+        </tr>`;
+
+    this.tabContent.innerHTML = `
+      <div class="tab-panel active output-stack">
+        <div class="json-output-wrapper">
+          <div class="json-output-header">
+            <div class="output-header-main">
+              <span class="json-output-label">CSV Output</span>
+              <span class="json-output-stats">${rows.length} filas &middot; ${stats.sectionCount} secciones &middot; ${stats.childCount} sub-secciones</span>
+            </div>
+            <div class="output-header-actions">
+              <button class="btn btn-secondary btn-sm" id="copyCsvOutput" type="button">📋 Copiar CSV</button>
+              <button class="btn btn-success btn-sm" id="exportCsvOutput" type="button">📦 Exportar .csv</button>
+            </div>
+          </div>
+          <div class="sections-table-wrapper">
+            <table class="sections-table output-table">
+              <thead>
+                <tr>
+                  <th>Parent Code</th>
+                  <th>Parent Name</th>
+                  <th>Child Code</th>
+                  <th>Child Name</th>
+                </tr>
+              </thead>
+              <tbody>${rowsHTML}</tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="json-output-wrapper">
+          <div class="json-output-header">
+            <span class="json-output-label">CSV Raw</span>
+            <span class="json-output-stats">Encabezado incluido, listo para copiar o abrir en Excel/Sheets</span>
+          </div>
+          <pre class="json-output-pre">${this.esc(csv)}</pre>
+        </div>
+      </div>`;
+
+    document.getElementById("copyCsvOutput").addEventListener("click", () => this.copyCSVOutput());
+    document.getElementById("exportCsvOutput").addEventListener("click", () => this.exportCSVOutput());
   }
 
   generateJSON() {
@@ -959,6 +1272,50 @@ class LayoutGenerator {
     return output;
   }
 
+  getCSVOutputRows() {
+    return this.sections.flatMap((section) => {
+      const parentCode = this.normalizeText(section.code);
+      const parentName = this.normalizeText(section.name);
+      const children = Array.isArray(section.children) ? section.children : [];
+
+      if (children.length === 0) {
+        return [{
+          parentCode,
+          parentName,
+          childCode: "",
+          childName: "",
+        }];
+      }
+
+      return children.map((child) => ({
+        parentCode,
+        parentName,
+        childCode: `${parentCode}/${this.normalizeText(child.code)}`,
+        childName: this.normalizeText(child.name),
+      }));
+    });
+  }
+
+  generateCSVOutput() {
+    const headers = ["Parent Code", "Parent Name", "Child Code", "Child Name"];
+    const rows = this.getCSVOutputRows();
+
+    return [
+      headers.join(","),
+      ...rows.map((row) => [
+        row.parentCode,
+        row.parentName,
+        row.childCode,
+        row.childName,
+      ].map((cell) => this.escapeCSVCell(cell)).join(",")),
+    ].join("\n");
+  }
+
+  escapeCSVCell(value) {
+    const normalized = this.normalizeText(value);
+    return `"${normalized.replace(/"/g, '""')}"`;
+  }
+
   highlightJSON(json) {
     return json.replace(
       /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
@@ -1002,6 +1359,29 @@ class LayoutGenerator {
     navigator.clipboard.writeText(str).then(
       () => this.toast("JSON copiado al portapapeles", "success"),
       () => this.toast("Error al copiar", "error")
+    );
+  }
+
+  exportCSVOutput() {
+    const csv = this.generateCSVOutput();
+    const name = this.config.code || this.config.name || "layout";
+    const filename = `${name.replace(/[^a-zA-Z0-9_-]/g, "_")}_output.csv`;
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.click();
+    URL.revokeObjectURL(url);
+    this.toast("CSV exportado", "success");
+  }
+
+  copyCSVOutput() {
+    const csv = this.generateCSVOutput();
+    navigator.clipboard.writeText(csv).then(
+      () => this.toast("CSV copiado al portapapeles", "success"),
+      () => this.toast("Error al copiar CSV", "error")
     );
   }
 
