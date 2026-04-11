@@ -69,6 +69,15 @@ const TOOLS = [
         path: 'tools/event-request/index.html',
         accentColor: '#10b981',
     },
+    {
+        id: 'ventas-masivas',
+        name: 'Ventas Masivas',
+        subtitle: 'Bulk Sales CSV Builder',
+        description: 'Armá, validá y exportá CSVs de ventas masivas con import completo o simple y edición por fila.',
+        icon: '🧾',
+        path: 'tools/ventas-masivas/index.html',
+        accentColor: '#14b8a6',
+    },
 ];
 
 function renderTools() {
