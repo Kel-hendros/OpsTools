@@ -88,6 +88,7 @@ class BulkSalesTool {
     this.page = 0;
     this.pageSize = 100;
     this.activeTab = "config";
+    this.csvFilteredMode = false;
     this.toastTimer = null;
 
     this.loadFromStorage();
@@ -978,8 +979,8 @@ class BulkSalesTool {
 
   renderCsvOutputTab() {
     const validation = this.validate();
-    const rows = this.getOutputRows();
-    const csv = validation.valid ? this.generateCSV() : "Corregi los pendientes para generar el CSV.";
+    const rows = this.getActiveOutputRows();
+    const csv = validation.valid ? this.generateActiveCSV() : "Corregi los pendientes para generar el CSV.";
     const rowsHTML = rows.length > 0
       ? rows.map((row, index) => this.renderOutputRow(row, index)).join("")
       : `
@@ -987,17 +988,24 @@ class BulkSalesTool {
           <td colspan="11" class="output-empty-cell">No hay filas para exportar todavia.</td>
         </tr>`;
 
+    const filteredWarning = this.csvFilteredMode
+      ? `<div class="csv-filtered-warning">⚠️ Solo exportando <strong>${fmt(rows.length)}</strong> filas filtradas de <strong>${fmt(this.rows.length)}</strong> totales.</div>`
+      : "";
+
     this.tabContent.innerHTML = `
       <div class="tab-panel active output-stack output-tab">
         ${this.renderValidationSummary(validation)}
 
         <div class="json-output-wrapper">
           <div class="json-output-header">
-            <div class="output-header-main">
-              <span class="json-output-label">CSV Output</span>
-              <span class="json-output-stats">${rows.length} filas &middot; ${validation.valid ? "listo para exportar" : `${validation.errors.length} pendientes`}</span>
+            <div class="output-header-main" style="flex-direction:row;align-items:center;gap:0.75rem">
+              <button class="btn ${this.csvFilteredMode ? "btn-danger" : "btn-secondary"} btn-sm" id="toggleCsvFilter" type="button">
+                🔍 ${this.csvFilteredMode ? "Quitar filtros" : "Aplicar filtros de Ordenes"}
+              </button>
+              ${filteredWarning}
             </div>
             <div class="output-header-actions">
+              <span class="json-output-stats">${fmt(rows.length)} filas · ${validation.valid ? "listo" : `${validation.errors.length} pendientes`}</span>
               <button class="btn btn-secondary btn-sm" id="copyCsvOutput" type="button" ${validation.valid ? "" : "disabled"}>📋 Copiar CSV</button>
               <button class="btn btn-success btn-sm" id="exportCsvOutput" type="button" ${validation.valid ? "" : "disabled"}>📦 Exportar .csv</button>
               <button class="btn btn-secondary btn-sm" id="exportChunked" type="button" ${validation.valid ? "" : "disabled"}>✂️ Exportar fragmentado</button>
@@ -1024,6 +1032,10 @@ class BulkSalesTool {
         </div>
       </div>`;
 
+    document.getElementById("toggleCsvFilter").addEventListener("click", () => {
+      this.csvFilteredMode = !this.csvFilteredMode;
+      this.renderActiveTab();
+    });
     const copyBtn = document.getElementById("copyCsvOutput");
     const exportBtn = document.getElementById("exportCsvOutput");
     if (copyBtn) copyBtn.addEventListener("click", () => this.copyCsv());
@@ -1469,7 +1481,7 @@ class BulkSalesTool {
       return;
     }
 
-    this.copyText(this.generateCSV())
+    this.copyText(this.generateActiveCSV())
       .then(() => this.toast("CSV copiado al portapapeles", "success"))
       .catch(() => this.toast("No se pudo copiar el CSV", "error"));
   }
@@ -1483,11 +1495,11 @@ class BulkSalesTool {
       return;
     }
 
-    const blob = new Blob([this.generateCSV()], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob([this.generateActiveCSV()], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = this.getDownloadFileName();
+    link.download = this.getActiveDownloadFileName();
     link.click();
     URL.revokeObjectURL(url);
     this.toast("CSV descargado", "success");
@@ -1500,7 +1512,7 @@ class BulkSalesTool {
       return;
     }
 
-    const outputRows = this.getOutputRows();
+    const outputRows = this.getActiveOutputRows();
     const totalRows = outputRows.length;
     if (totalRows === 0) {
       this.toast("No hay filas para exportar", "error");
@@ -1562,7 +1574,8 @@ class BulkSalesTool {
 
   downloadChunkedZip(outputRows, maxRows) {
     const header = OUTPUT_HEADERS.join(",");
-    const baseName = this.getEffectiveOutputFileName();
+    const rawBase = this.getEffectiveOutputFileName();
+    const baseName = this.csvFilteredMode ? `${rawBase}-filtrado` : rawBase;
     const totalParts = Math.ceil(outputRows.length / maxRows);
     const files = {};
     const encoder = new TextEncoder();
@@ -1688,6 +1701,26 @@ class BulkSalesTool {
     this.rows = rows.map((row) => this.createRow(row));
     this.syncAllFilterStates();
     this.save();
+  }
+
+  getActiveOutputRows() {
+    if (this.csvFilteredMode) {
+      const filtered = this.getFilteredRowEntries();
+      return filtered.map(({ row }) => this.getOutputRow(row));
+    }
+    return this.getOutputRows();
+  }
+
+  generateActiveCSV() {
+    const lines = this.getActiveOutputRows().map((row) => {
+      return OUTPUT_HEADERS.map((header) => escapeCSVCell(row[header])).join(",");
+    });
+    return [OUTPUT_HEADERS.join(","), ...lines].join("\n");
+  }
+
+  getActiveDownloadFileName() {
+    const base = this.getEffectiveOutputFileName();
+    return this.csvFilteredMode ? `${base}-filtrado.csv` : `${base}.csv`;
   }
 
   getOutputRows() {

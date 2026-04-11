@@ -973,6 +973,11 @@ select {
   gap: 0.6rem;
 }
 
+.output-tab .output-table-wrapper {
+  max-height: 50vh;
+  overflow: auto;
+}
+
 .orders-tab .sections-table-wrapper,
 .output-tab .sections-table-wrapper {
   border-radius: var(--radius-md);
@@ -1124,10 +1129,10 @@ select.table-input {
   overflow: hidden;
 }
 
-.output-stack {
+.output-stack.active {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1.5rem;
 }
 
 .json-output-header {
@@ -1429,6 +1434,17 @@ select.table-input {
   display: flex;
   gap: 0.5rem;
   justify-content: flex-end;
+}
+
+/* ─── CSV Filtered Warning ─── */
+.csv-filtered-warning {
+  background: var(--accent-red-dim);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-sm);
+  color: var(--accent-red);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.4rem 0.75rem;
 }
 
 /* ─── Toast ─── */
