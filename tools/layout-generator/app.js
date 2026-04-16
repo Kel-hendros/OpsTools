@@ -13,6 +13,7 @@ class LayoutGenerator {
     this.TABS = [
       { id: "config", label: "Configuración", icon: "⚙️" },
       { id: "sections", label: "Secciones", icon: "🏟️" },
+      { id: "analysis", label: "Análisis", icon: "📊" },
       { id: "output", label: "JSON Output", icon: "📦" },
       { id: "csv-output", label: "CSV Output", icon: "🧾" },
     ];
@@ -24,6 +25,7 @@ class LayoutGenerator {
       image: { small: "", medium: "", large: "" },
     };
     this.sections = [];
+    this.expandedSections = new Set();
     this.activeTab = "config";
 
     this.loadFromStorage();
@@ -88,6 +90,9 @@ class LayoutGenerator {
         break;
       case "sections":
         this.renderSectionsTab();
+        break;
+      case "analysis":
+        this.renderAnalysisTab();
         break;
       case "output":
         this.renderOutputTab();
@@ -217,7 +222,7 @@ class LayoutGenerator {
               <div class="csv-zone-icon">📄</div>
               <div class="csv-zone-title">Arrastrá un CSV o hacé click para cargar secciones</div>
               <div class="csv-zone-hint">Columnas: parent, code, name, type, unnumbered, capacity, visibilityScope, color, reseleable, disabled, exclusive</div>
-              <div class="csv-zone-hint" style="margin-top:0.25rem; opacity:0.5;">Si "parent" tiene un código → sub-sección. Si está vacío → sección principal. Padre inexistente se crea automáticamente.</div>
+              <div class="csv-zone-hint csv-zone-hint-sub">Si "parent" tiene un código → sub-sección. Si está vacío → sección principal. Padre inexistente se crea automáticamente.</div>
             </div>
           </div>
 
@@ -227,13 +232,13 @@ class LayoutGenerator {
               <div class="csv-zone-icon">🧩</div>
               <div class="csv-zone-title">Cargá un JSON o pegá el JSON</div>
               <div class="csv-zone-hint">Importá un layout existente para editarlo desde este generador.</div>
-              <div class="csv-zone-hint" style="margin-top:0.25rem; opacity:0.5;">Soporta layouts exportados por esta misma herramienta y estructuras padre/sub-sección.</div>
+              <div class="csv-zone-hint csv-zone-hint-sub">Soporta layouts exportados por esta misma herramienta y estructuras padre/sub-sección.</div>
             </div>
             <button class="btn btn-secondary btn-sm zone-inline-btn" id="openJsonPaste" type="button">Pegar JSON</button>
           </div>
         </div>
 
-        <div class="sections-toolbar" style="margin-top: 1rem;">
+        <div class="sections-toolbar">
           <div class="sections-stats">
             <span><strong>${stats.sectionCount}</strong> secciones</span>
             <span><strong>${stats.childCount}</strong> sub-secciones</span>
@@ -267,24 +272,23 @@ class LayoutGenerator {
         ? s.children.reduce((sum, c) => sum + (c.capacity || 0), 0)
         : s.capacity;
       const capDisplay = cap != null && cap > 0 ? cap.toLocaleString() : "—";
+      const isExpanded = this.expandedSections.has(i);
+      const toggleIcon = isExpanded ? "▾" : "▸";
 
-      return `
-        <tr>
+      let html = `
+        <tr class="parent-row${isExpanded ? " expanded" : ""}" data-row-idx="${i}" data-row-type="parent">
           <td><span class="color-swatch" style="background:${this.esc(s.color || "#666")}"></span></td>
           <td class="code-cell">${this.esc(s.code)}</td>
-          <td>${this.esc(s.name)}</td>
-          <td><span class="badge badge-muted">${this.esc(s.type)}</span></td>
+          <td class="editable-cell" data-field="name" data-idx="${i}">${this.esc(s.name)}</td>
           <td class="capacity-cell">${capDisplay}</td>
           <td>${this.visBadge(s.visibilityScope)}</td>
+          <td>${s.unnumbered ? '<span class="badge badge-red">NO</span>' : '<span class="badge badge-green">SÍ</span>'}</td>
+          <td class="editable-cell" data-field="door" data-idx="${i}">${this.esc(s.door || "—")}</td>
+          <td class="editable-cell" data-field="entrySide" data-idx="${i}">${this.esc(s.entrySide || "—")}</td>
           <td>
-            ${s.unnumbered ? '<span class="badge badge-cyan">UNN</span>' : '<span class="badge badge-muted">NUM</span>'}
-            ${s.reseleable ? ' <span class="badge badge-amber">RES</span>' : ""}
-          </td>
-          <td>
-            ${childCount > 0
-              ? `<span class="children-count" data-idx="${i}">${childCount} sub</span>`
-              : `<button class="action-btn" title="Agregar sub-secciones" data-children="${i}">📂</button>`
-            }
+            <button class="action-btn sub-toggle" title="${isExpanded ? "Colapsar" : "Expandir"} sub-secciones" data-toggle="${i}">
+              ${toggleIcon} ${childCount > 0 ? childCount : "0"}
+            </button>
           </td>
           <td>
             <div class="actions-cell">
@@ -293,6 +297,46 @@ class LayoutGenerator {
             </div>
           </td>
         </tr>`;
+
+      if (isExpanded) {
+        const children = s.children || [];
+        children.forEach((c, ci) => {
+          const childCap = c.capacity != null && c.capacity > 0 ? c.capacity.toLocaleString() : "—";
+          html += `
+            <tr class="child-row" data-row-idx="${i}" data-child-idx="${ci}" data-row-type="child">
+              <td><span class="color-swatch" style="background:${this.esc(c.color || s.color || "#666")}"></span></td>
+              <td class="code-cell child-code">${this.esc(s.code)}/${this.esc(c.code)}</td>
+              <td class="editable-cell" data-field="name" data-idx="${i}" data-cidx="${ci}">${this.esc(c.name)}</td>
+              <td class="capacity-cell">${childCap}</td>
+              <td>${this.visBadge(c.visibilityScope)}</td>
+              <td>${c.unnumbered ? '<span class="badge badge-red">NO</span>' : '<span class="badge badge-green">SÍ</span>'}</td>
+              <td class="editable-cell" data-field="door" data-idx="${i}" data-cidx="${ci}">${this.esc(c.door || "—")}</td>
+              <td class="editable-cell" data-field="entrySide" data-idx="${i}" data-cidx="${ci}">${this.esc(c.entrySide || "—")}</td>
+              <td></td>
+              <td>
+                <div class="actions-cell">
+                  <button class="action-btn" title="Editar" data-cedit="${ci}" data-parent="${i}">✏️</button>
+                  <button class="action-btn danger" title="Eliminar" data-cdelete="${ci}" data-parent="${i}">🗑️</button>
+                </div>
+              </td>
+            </tr>`;
+        });
+        // Action row: import CSV + add child
+        html += `
+          <tr class="child-actions-row">
+            <td colspan="10">
+              <div class="child-actions-bar">
+                <label class="btn btn-secondary btn-sm child-import-btn">
+                  📄 Importar subsecciones por CSV
+                  <input type="file" accept=".csv,.tsv,.txt" data-child-csv="${i}" hidden>
+                </label>
+                <button class="btn btn-secondary btn-sm" data-add-child="${i}">+ Agregar Sub-sección</button>
+              </div>
+            </td>
+          </tr>`;
+      }
+
+      return html;
     }).join("");
 
     return `
@@ -303,10 +347,11 @@ class LayoutGenerator {
               <th></th>
               <th>Código</th>
               <th>Nombre</th>
-              <th>Tipo</th>
               <th>Capacidad</th>
               <th>Visibilidad</th>
-              <th>Flags</th>
+              <th>Numerada</th>
+              <th>Door</th>
+              <th>Entry Side</th>
               <th>Sub</th>
               <th>Acciones</th>
             </tr>
@@ -380,18 +425,136 @@ class LayoutGenerator {
     // Bind table actions via delegation
     const container = document.getElementById("sectionsContainer");
     container.addEventListener("click", (e) => {
+      const toggle = e.target.closest("[data-toggle]");
+      if (toggle) {
+        const idx = Number(toggle.dataset.toggle);
+        if (this.expandedSections.has(idx)) {
+          this.expandedSections.delete(idx);
+        } else {
+          this.expandedSections.add(idx);
+        }
+        this.renderSectionsTab();
+        return;
+      }
+
+      const addChild = e.target.closest("[data-add-child]");
+      if (addChild) return this.openChildEditModal(Number(addChild.dataset.addChild));
+
+      const cedit = e.target.closest("[data-cedit]");
+      if (cedit) return this.openChildEditModal(Number(cedit.dataset.parent), Number(cedit.dataset.cedit));
+
+      const cdel = e.target.closest("[data-cdelete]");
+      if (cdel) {
+        const pi = Number(cdel.dataset.parent);
+        const ci = Number(cdel.dataset.cdelete);
+        const child = this.sections[pi].children[ci];
+        if (confirm(`¿Eliminar sub-sección "${child.name}"?`)) {
+          this.sections[pi].children.splice(ci, 1);
+          this.save();
+          this.renderTabs();
+          this.renderSectionsTab();
+        }
+        return;
+      }
+
       const btn = e.target.closest("[data-edit]");
       if (btn) return this.openEditModal(Number(btn.dataset.edit));
 
       const del = e.target.closest("[data-delete]");
       if (del) return this.deleteSection(Number(del.dataset.delete));
 
-      const children = e.target.closest("[data-children]");
-      if (children) return this.openChildrenModal(Number(children.dataset.children));
-
-      const childCount = e.target.closest("[data-idx]");
-      if (childCount) return this.openChildrenModal(Number(childCount.dataset.idx));
+      const editable = e.target.closest(".editable-cell");
+      if (editable && !editable.querySelector("input")) {
+        this.startInlineEdit(editable);
+      }
     });
+
+    container.addEventListener("change", (e) => {
+      const csvInput = e.target.closest("[data-child-csv]");
+      if (csvInput && csvInput.files[0]) {
+        this.handleChildCSV(csvInput.files[0], Number(csvInput.dataset.childCsv));
+        csvInput.value = "";
+      }
+    });
+  }
+
+  /* ─── Inline Editing ─── */
+
+  startInlineEdit(cell) {
+    const field = cell.dataset.field;
+    const idx = Number(cell.dataset.idx);
+    const cidx = cell.dataset.cidx != null ? Number(cell.dataset.cidx) : null;
+    const isChild = cidx != null;
+
+    const section = isChild ? this.sections[idx].children[cidx] : this.sections[idx];
+    const currentVal = section[field] || "";
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "inline-edit-input";
+    input.value = currentVal === "—" ? "" : currentVal;
+    cell.textContent = "";
+    cell.appendChild(input);
+    input.focus();
+    input.select();
+
+    const commit = () => {
+      const newVal = input.value.trim();
+      if (field === "name" && !newVal) {
+        input.classList.add("inline-edit-error");
+        input.focus();
+        return false;
+      }
+      section[field] = newVal;
+      cell.textContent = newVal || "—";
+      this.save();
+      this.renderTabs();
+      return true;
+    };
+
+    const cancel = () => {
+      cell.textContent = currentVal || "—";
+    };
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        commit();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        cancel();
+      } else if (e.key === "Tab") {
+        e.preventDefault();
+        if (!commit()) return;
+        this.focusNextEditableRow(cell, field, e.shiftKey);
+      }
+    });
+
+    input.addEventListener("blur", () => {
+      // Only act if input is still in DOM (not already committed via Tab)
+      if (!cell.contains(input)) return;
+      const newVal = input.value.trim();
+      if (field === "name" && !newVal) {
+        cancel();
+      } else {
+        section[field] = newVal;
+        cell.textContent = newVal || "—";
+        this.save();
+        this.renderTabs();
+      }
+    });
+  }
+
+  focusNextEditableRow(currentCell, field, reverse) {
+    const row = currentCell.closest("tr");
+    const allRows = Array.from(row.closest("tbody").querySelectorAll("tr.parent-row, tr.child-row"));
+    const currentRowIdx = allRows.indexOf(row);
+    const nextRowIdx = reverse ? currentRowIdx - 1 : currentRowIdx + 1;
+    if (nextRowIdx < 0 || nextRowIdx >= allRows.length) return;
+
+    const nextRow = allRows[nextRowIdx];
+    const nextCell = nextRow.querySelector(`.editable-cell[data-field="${field}"]`);
+    if (nextCell) this.startInlineEdit(nextCell);
   }
 
   handleCSV(file) {
@@ -600,6 +763,9 @@ class LayoutGenerator {
       capacity: sourceChildren.length > 0 ? null : this.normalizeOptionalNumber(section.capacity),
       unnumbered: section.unnumbered == null ? true : this.parseBool(section.unnumbered),
       reseleable: this.parseBool(section.reseleable),
+      door: this.normalizeText(section.door) || "",
+      entrySide: this.normalizeText(section.entrySide) || "",
+      references: Array.isArray(section.references) ? section.references : [],
       children: sourceChildren.map((child, childIdx) =>
         this.normalizeImportedChild(child, parentCode, childIdx, section)
       ),
@@ -634,6 +800,9 @@ class LayoutGenerator {
       capacity: this.normalizeOptionalNumber(child.capacity),
       unnumbered: child.unnumbered == null ? true : this.parseBool(child.unnumbered),
       reseleable: this.parseBool(child.reseleable),
+      door: this.normalizeText(child.door) || "",
+      entrySide: this.normalizeText(child.entrySide) || "",
+      references: Array.isArray(child.references) ? child.references : [],
     };
   }
 
@@ -705,6 +874,9 @@ class LayoutGenerator {
       capacity: row.capacity || row.capacidad ? Number(row.capacity || row.capacidad) : null,
       unnumbered: row.unnumbered != null ? this.parseBool(row.unnumbered) : true,
       reseleable: this.parseBool(row.reseleable),
+      door: row.door || row.puerta || "",
+      entrySide: row.entryside || row.entry_side || "",
+      references: [],
       children: [],
     };
   }
@@ -801,14 +973,15 @@ class LayoutGenerator {
       if (!data.code || !data.name) return this.toast("Código y nombre son obligatorios", "error");
 
       if (isNew) {
-        this.sections.push({ ...data, children: [] });
+        this.sections.push({ ...data, references: [], children: [] });
       } else {
         const children = this.sections[idx].children || [];
+        const references = this.sections[idx].references || [];
         // Propagate color to children if parent color changed
         if (originalColor && data.color !== originalColor && children.length > 0) {
           children.forEach((c) => { c.color = data.color; });
         }
-        this.sections[idx] = { ...data, children };
+        this.sections[idx] = { ...data, references, children };
       }
       this.closeModal();
       this.save();
@@ -856,15 +1029,16 @@ class LayoutGenerator {
         </div>
         <div class="form-row cols-3">
           <div class="form-group">
-            <label class="form-label">Capacidad</label>
-            <input type="number" class="form-input" id="fCapacity" value="${s.capacity || ""}" min="0" placeholder="—">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Unnumbered</label>
+            <label class="form-label">Sin numerar</label>
             <select class="form-select" id="fUnnumbered">
               <option value="true" ${s.unnumbered ? "selected" : ""}>Sí (Sin numerar)</option>
               <option value="false" ${!s.unnumbered ? "selected" : ""}>No (Numerado)</option>
             </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Capacidad</label>
+            <input type="number" class="form-input" id="fCapacity" value="${s.capacity || ""}" min="0" placeholder="—" ${!s.unnumbered ? "disabled" : ""}>
+            <span class="form-hint">Solo editable si es sin numerar.</span>
           </div>
           <div class="form-group">
             <label class="form-label">Reseleable</label>
@@ -876,18 +1050,12 @@ class LayoutGenerator {
         </div>
         <div class="form-row cols-2">
           <div class="form-group">
-            <label class="form-label">Disabled</label>
-            <select class="form-select" id="fDisabled">
-              <option value="false" ${!s.disabled ? "selected" : ""}>No</option>
-              <option value="true" ${s.disabled ? "selected" : ""}>Sí</option>
-            </select>
+            <label class="form-label">Door</label>
+            <input type="text" class="form-input" id="fDoor" value="${this.esc(s.door || "")}" placeholder="Ej: Peñoles Norte/Sur">
           </div>
           <div class="form-group">
-            <label class="form-label">Exclusive</label>
-            <select class="form-select" id="fExclusive">
-              <option value="false" ${!s.exclusive ? "selected" : ""}>No</option>
-              <option value="true" ${s.exclusive ? "selected" : ""}>Sí</option>
-            </select>
+            <label class="form-label">Entry Side</label>
+            <input type="text" class="form-input" id="fEntrySide" value="${this.esc(s.entrySide || "")}" placeholder="Ej: LEFT, RIGHT">
           </div>
         </div>
         <div class="modal-actions">
@@ -904,12 +1072,14 @@ class LayoutGenerator {
       name: document.getElementById("fName").value.trim(),
       type: document.getElementById("fType").value,
       color: document.getElementById("fColor").value,
-      disabled: document.getElementById("fDisabled").value === "true",
-      exclusive: document.getElementById("fExclusive").value === "true",
+      disabled: false,
+      exclusive: false,
       visibilityScope: document.getElementById("fVisibility").value,
       capacity: cap ? Number(cap) : null,
       unnumbered: document.getElementById("fUnnumbered").value === "true",
       reseleable: document.getElementById("fReseleable").value === "true",
+      door: document.getElementById("fDoor").value.trim(),
+      entrySide: document.getElementById("fEntrySide").value.trim(),
     };
   }
 
@@ -930,6 +1100,17 @@ class LayoutGenerator {
         codeEl.value = this.autoCode(nameEl.value);
       }
     });
+
+    // Toggle capacity based on unnumbered
+    const unnumberedEl = document.getElementById("fUnnumbered");
+    const capacityEl = document.getElementById("fCapacity");
+    if (unnumberedEl && capacityEl) {
+      unnumberedEl.addEventListener("change", () => {
+        const isUnnumbered = unnumberedEl.value === "true";
+        capacityEl.disabled = !isUnnumbered;
+        if (!isUnnumbered) capacityEl.value = "";
+      });
+    }
   }
 
   /* ═══════════════ CHILDREN MODAL ═══════════════ */
@@ -966,11 +1147,11 @@ class LayoutGenerator {
       const totalChildCap = children.reduce((s, c) => s + (c.capacity || 0), 0);
 
       tableHTML = `
-        <div class="sections-stats" style="margin-bottom: 0.5rem;">
+        <div class="sections-stats children-stats">
           <span><strong>${children.length}</strong> sub-secciones</span>
           <span><strong>${totalChildCap.toLocaleString()}</strong> capacidad</span>
         </div>
-        <div class="sections-table-wrapper" style="margin-bottom: 1rem;">
+        <div class="sections-table-wrapper children-table-wrapper">
           <table class="sections-table">
             <thead>
               <tr>
@@ -989,13 +1170,13 @@ class LayoutGenerator {
 
     this.modalBody.innerHTML = `
       ${tableHTML}
-      <div class="csv-zone" id="childCsvZone" style="margin-bottom: 1rem;">
+      <div class="csv-zone children-csv-zone" id="childCsvZone">
         <input type="file" accept=".csv,.tsv,.txt" id="childCsvFile">
         <div class="csv-zone-icon">📄</div>
         <div class="csv-zone-title">CSV para sub-secciones de ${this.esc(parent.code)}</div>
         <div class="csv-zone-hint">Los códigos se prefijan automáticamente con ${this.esc(parent.code)}/</div>
       </div>
-      <div style="display:flex; gap:0.5rem; justify-content:flex-end;">
+      <div class="children-modal-actions">
         <button class="btn btn-secondary btn-sm" id="addChildBtn">+ Agregar Sub-sección</button>
       </div>`;
 
@@ -1067,8 +1248,9 @@ class LayoutGenerator {
         });
 
         this.save();
-        this.renderChildrenModalBody(parentIdx);
+        this.expandedSections.add(parentIdx);
         this.renderTabs();
+        this.renderSectionsTab();
         this.toast(`${parsed.length} sub-secciones cargadas`, "success");
       } catch (err) {
         this.toast("Error al parsear CSV: " + err.message, "error");
@@ -1095,6 +1277,7 @@ class LayoutGenerator {
       : `Editar: ${child.name}`;
 
     this.modalBody.innerHTML = this.renderSectionForm(child, isNew, null);
+    this.modal.classList.add("open");
     this.bindFormAutoCode();
 
     document.getElementById("modalSave").addEventListener("click", () => {
@@ -1103,20 +1286,20 @@ class LayoutGenerator {
 
       if (isNew) {
         if (!parent.children) parent.children = [];
-        parent.children.push(data);
+        parent.children.push({ ...data, references: [] });
       } else {
-        parent.children[childIdx] = data;
+        const references = parent.children[childIdx].references || [];
+        parent.children[childIdx] = { ...data, references };
       }
+      this.closeModal();
       this.save();
-      // Go back to children list
-      this.modalTitle.textContent = `Sub-secciones de: ${parent.name} (${parent.code})`;
-      this.renderChildrenModalBody(parentIdx);
+      this.expandedSections.add(parentIdx);
       this.renderTabs();
+      this.renderSectionsTab();
     });
 
     document.getElementById("modalCancel").addEventListener("click", () => {
-      this.modalTitle.textContent = `Sub-secciones de: ${parent.name} (${parent.code})`;
-      this.renderChildrenModalBody(parentIdx);
+      this.closeModal();
     });
   }
 
@@ -1128,6 +1311,288 @@ class LayoutGenerator {
     }
   }
 
+  /* ═══════════════ ANALYSIS TAB ═══════════════ */
+
+  renderAnalysisTab() {
+    if (this.sections.length === 0) {
+      this.tabContent.innerHTML = `
+        <div class="tab-panel active analysis-tab">
+          <div class="form-card">
+            <div class="empty-state">
+              <div class="empty-state-icon">📊</div>
+              <div class="empty-state-text">No hay datos para analizar</div>
+              <div class="empty-state-hint">Cargá secciones primero para ver el análisis del layout.</div>
+            </div>
+          </div>
+        </div>`;
+      return;
+    }
+
+    const stats = this.getSectionStats();
+
+    this.tabContent.innerHTML = `
+      <div class="tab-panel active analysis-tab">
+        <div class="kpi-row">
+          <div class="kpi-card">
+            <div class="kpi-value">${stats.sectionCount}</div>
+            <div class="kpi-label">Secciones</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-value">${stats.childCount}</div>
+            <div class="kpi-label">Sub-Secciones</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-value">${stats.totalCap.toLocaleString()}</div>
+            <div class="kpi-label">Capacidad Total</div>
+          </div>
+        </div>
+        <div class="analysis-grid">
+          ${this.renderCapacityPivot()}
+          ${this.renderDoorsCard()}
+          ${this.renderEntrySidesCard()}
+          ${this.renderColorsCard()}
+        </div>
+      </div>`;
+
+    this.bindAnalysisTab();
+  }
+
+  bindAnalysisTab() {
+    this.tabContent.addEventListener("click", (e) => {
+      const item = e.target.closest("[data-bulk-edit]");
+      if (item) this.openBulkEditModal(item.dataset.bulkEdit, item.dataset.bulkValue);
+    });
+  }
+
+  countFieldUsage(field, value) {
+    let count = 0;
+    this.sections.forEach((s) => {
+      if (s[field] === value) count++;
+      (s.children || []).forEach((c) => { if (c[field] === value) count++; });
+    });
+    return count;
+  }
+
+  openBulkEditModal(field, currentValue) {
+    const count = this.countFieldUsage(field, currentValue);
+    const labels = { door: "Door", entrySide: "Entry Side", color: "Color" };
+    const label = labels[field] || field;
+    const isColor = field === "color";
+
+    const existing = document.getElementById("bulkEditOverlay");
+    if (existing) existing.remove();
+
+    const overlay = document.createElement("div");
+    overlay.id = "bulkEditOverlay";
+    overlay.className = "reset-overlay";
+
+    const colorFields = isColor ? `
+      <div class="form-row cols-2">
+        <div class="form-group">
+          <label class="form-label">Color</label>
+          <input type="color" class="form-input" id="bulkColorPicker" value="${currentValue}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Hex</label>
+          <input type="text" class="form-input" id="bulkEditInput" value="${this.esc(currentValue)}" placeholder="${this.esc(currentValue)}">
+        </div>
+      </div>` : `
+      <div class="form-group">
+        <label class="form-label">${label}</label>
+        <input type="text" class="form-input" id="bulkEditInput" value="${this.esc(currentValue)}" placeholder="Dejar vacío para eliminar">
+      </div>`;
+
+    overlay.innerHTML = `
+      <div class="reset-modal bulk-edit-modal">
+        <div class="reset-title">Modificar <strong>${this.esc(label)}</strong> en las <strong>${count}</strong> sección${count > 1 ? "es" : ""} que lo usen?</div>
+        ${colorFields}
+        <div class="reset-actions">
+          <button class="btn btn-secondary btn-sm" id="bulkEditCancel" type="button">Cancelar</button>
+          <button class="btn btn-primary btn-sm" id="bulkEditAccept" type="button">Aplicar a todas</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    const close = () => overlay.remove();
+    document.getElementById("bulkEditCancel").addEventListener("click", close);
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+    document.addEventListener("keydown", function handler(e) {
+      if (e.key === "Escape") { close(); document.removeEventListener("keydown", handler); }
+    });
+
+    // Sync color picker and hex input
+    if (isColor) {
+      const picker = document.getElementById("bulkColorPicker");
+      const input = document.getElementById("bulkEditInput");
+      picker.addEventListener("input", () => { input.value = picker.value.toUpperCase(); });
+      input.addEventListener("input", () => {
+        const v = input.value.trim();
+        if (/^#[0-9a-fA-F]{6}$/.test(v)) picker.value = v;
+      });
+    }
+
+    document.getElementById("bulkEditAccept").addEventListener("click", () => {
+      const newValue = document.getElementById("bulkEditInput").value.trim();
+
+      this.sections.forEach((s) => {
+        if (s[field] === currentValue) s[field] = newValue;
+        (s.children || []).forEach((c) => { if (c[field] === currentValue) c[field] = newValue; });
+      });
+
+      close();
+      this.save();
+      this.renderTabs();
+      this.renderAnalysisTab();
+      this.toast(`${label} actualizado en ${count} sección${count > 1 ? "es" : ""}`, "success");
+    });
+  }
+
+  renderCapacityPivot() {
+    let totalCap = 0;
+    let totalSubs = 0;
+    const rows = this.sections.map((s) => {
+      const children = s.children || [];
+      const subCount = children.length;
+      const cap = subCount > 0
+        ? children.reduce((sum, c) => sum + (c.capacity || 0), 0)
+        : (s.capacity || 0);
+      totalCap += cap;
+      totalSubs += subCount;
+
+      return `
+        <tr>
+          <td class="pivot-parent-name">${this.esc(s.code)}</td>
+          <td>${this.esc(s.name)}</td>
+          <td class="pivot-count">${subCount > 0 ? subCount : "—"}</td>
+          <td class="pivot-cap">${cap > 0 ? cap.toLocaleString() : "—"}</td>
+        </tr>`;
+    }).join("");
+
+    return `
+      <div class="form-card analysis-card analysis-card-full">
+        <div class="analysis-card-header">
+          <span class="analysis-card-title">Capacidad por Sección</span>
+          <span class="analysis-card-stat">${totalCap.toLocaleString()} total</span>
+        </div>
+        <div class="pivot-table-wrapper">
+          <table class="sections-table pivot-table">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Nombre</th>
+                <th>SubSecciones</th>
+                <th>Capacidad</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+              <tr class="pivot-total-row">
+                <td colspan="2"><strong>Total General</strong></td>
+                <td class="pivot-count"><strong>${totalSubs}</strong></td>
+                <td class="pivot-cap"><strong>${totalCap.toLocaleString()}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+  }
+
+  renderDoorsCard() {
+    const doors = new Set();
+    this.sections.forEach((s) => {
+      if (s.door) doors.add(s.door);
+      (s.children || []).forEach((c) => { if (c.door) doors.add(c.door); });
+    });
+
+    const list = Array.from(doors).sort();
+    const content = list.length > 0
+      ? `<ul class="analysis-list">${list.map((d) => {
+          const count = this.countFieldUsage("door", d);
+          return `<li class="analysis-list-item" data-bulk-edit="door" data-bulk-value="${this.esc(d)}">
+            <span>${this.esc(d)}</span>
+            <span class="analysis-edit-btn">✏️</span>
+          </li>`;
+        }).join("")}</ul>`
+      : '<div class="analysis-empty">Sin doors definidos</div>';
+
+    return `
+      <div class="form-card analysis-card">
+        <div class="analysis-card-header">
+          <span class="analysis-card-title">Doors</span>
+          <span class="analysis-card-stat">${list.length} únicos</span>
+        </div>
+        ${content}
+      </div>`;
+  }
+
+  renderEntrySidesCard() {
+    const sides = new Set();
+    this.sections.forEach((s) => {
+      if (s.entrySide) sides.add(s.entrySide);
+      (s.children || []).forEach((c) => { if (c.entrySide) sides.add(c.entrySide); });
+    });
+
+    const list = Array.from(sides).sort();
+    const content = list.length > 0
+      ? `<ul class="analysis-list">${list.map((s) => {
+          return `<li class="analysis-list-item" data-bulk-edit="entrySide" data-bulk-value="${this.esc(s)}">
+            <span>${this.esc(s)}</span>
+            <span class="analysis-edit-btn">✏️</span>
+          </li>`;
+        }).join("")}</ul>`
+      : '<div class="analysis-empty">Sin entry sides definidos</div>';
+
+    return `
+      <div class="form-card analysis-card">
+        <div class="analysis-card-header">
+          <span class="analysis-card-title">Entry Sides</span>
+          <span class="analysis-card-stat">${list.length} únicos</span>
+        </div>
+        ${content}
+      </div>`;
+  }
+
+  renderColorsCard() {
+    const colorMap = new Map();
+    this.sections.forEach((s) => {
+      if (s.color) {
+        const hex = s.color.toUpperCase();
+        if (!colorMap.has(hex)) colorMap.set(hex, []);
+        colorMap.get(hex).push(s.code);
+      }
+      (s.children || []).forEach((c) => {
+        if (c.color) {
+          const hex = c.color.toUpperCase();
+          if (!colorMap.has(hex)) colorMap.set(hex, []);
+          colorMap.get(hex).push(`${s.code}/${c.code}`);
+        }
+      });
+    });
+
+    const swatches = Array.from(colorMap.entries()).map(([hex, codes]) => `
+      <div class="color-palette-item">
+        <div class="color-palette-swatch-wrapper" data-bulk-edit="color" data-bulk-value="${hex}">
+          <span class="color-palette-swatch" style="background:${hex}"></span>
+          <span class="analysis-edit-btn color-edit-btn">✏️</span>
+        </div>
+        <div class="color-palette-info">
+          <span class="color-palette-hex">${hex}</span>
+          <span class="color-palette-count">${codes.length} sección${codes.length > 1 ? "es" : ""}</span>
+        </div>
+      </div>`).join("");
+
+    return `
+      <div class="form-card analysis-card analysis-card-full">
+        <div class="analysis-card-header">
+          <span class="analysis-card-title">Paleta de Colores</span>
+          <span class="analysis-card-stat">${colorMap.size} colores</span>
+        </div>
+        <div class="color-palette">
+          ${swatches || '<div class="analysis-empty">Sin colores definidos</div>'}
+        </div>
+      </div>`;
+  }
+
   /* ═══════════════ JSON OUTPUT TAB ═══════════════ */
 
   renderOutputTab() {
@@ -1137,7 +1602,7 @@ class LayoutGenerator {
     const stats = this.getSectionStats();
 
     this.tabContent.innerHTML = `
-      <div class="tab-panel active">
+      <div class="tab-panel active output-stack">
         <div class="json-output-wrapper">
           <div class="json-output-header">
             <div class="output-header-main">
@@ -1161,6 +1626,10 @@ class LayoutGenerator {
     const rows = this.getCSVOutputRows();
     const csv = this.generateCSVOutput();
     const stats = this.getSectionStats();
+    const hasDoor = this.csvHasField("door");
+    const hasEntrySide = this.csvHasField("entrySide");
+    const colCount = 4 + (hasDoor ? 1 : 0) + (hasEntrySide ? 1 : 0);
+
     const rowsHTML = rows.length > 0
       ? rows.map((row) => `
         <tr>
@@ -1168,10 +1637,12 @@ class LayoutGenerator {
           <td>${this.esc(row.parentName)}</td>
           <td class="code-cell">${row.childCode ? this.esc(row.childCode) : '<span class="output-empty">—</span>'}</td>
           <td>${row.childName ? this.esc(row.childName) : '<span class="output-empty">—</span>'}</td>
+          ${hasDoor ? `<td>${row.door ? this.esc(row.door) : '<span class="output-empty">—</span>'}</td>` : ""}
+          ${hasEntrySide ? `<td>${row.entrySide ? this.esc(row.entrySide) : '<span class="output-empty">—</span>'}</td>` : ""}
         </tr>`).join("")
       : `
         <tr>
-          <td colspan="4" class="output-empty-cell">No hay filas para exportar todavía.</td>
+          <td colspan="${colCount}" class="output-empty-cell">No hay filas para exportar todavía.</td>
         </tr>`;
 
     this.tabContent.innerHTML = `
@@ -1195,6 +1666,8 @@ class LayoutGenerator {
                   <th>Parent Name</th>
                   <th>Child Code</th>
                   <th>Child Name</th>
+                  ${hasDoor ? "<th>Door</th>" : ""}
+                  ${hasEntrySide ? "<th>Entry Side</th>" : ""}
                 </tr>
               </thead>
               <tbody>${rowsHTML}</tbody>
@@ -1244,6 +1717,9 @@ class LayoutGenerator {
             visibilityScope: c.visibilityScope || s.visibilityScope || "ALL",
           };
           if (c.capacity != null) child.capacity = c.capacity;
+          if (c.references && c.references.length > 0) child.references = c.references;
+          if (c.door) child.door = c.door;
+          if (c.entrySide) child.entrySide = c.entrySide;
           child.unnumbered = c.unnumbered != null ? c.unnumbered : true;
           child.reseleable = c.reseleable || false;
           return child;
@@ -1253,6 +1729,9 @@ class LayoutGenerator {
       if (s.capacity != null && (!s.children || s.children.length === 0)) {
         sec.capacity = s.capacity;
       }
+      if (s.references && s.references.length > 0) sec.references = s.references;
+      if (s.door) sec.door = s.door;
+      if (s.entrySide) sec.entrySide = s.entrySide;
       sec.unnumbered = s.unnumbered != null ? s.unnumbered : true;
       sec.reseleable = s.reseleable || false;
 
@@ -1284,6 +1763,8 @@ class LayoutGenerator {
           parentName,
           childCode: "",
           childName: "",
+          door: section.door || "",
+          entrySide: section.entrySide || "",
         }];
       }
 
@@ -1292,22 +1773,35 @@ class LayoutGenerator {
         parentName,
         childCode: `${parentCode}/${this.normalizeText(child.code)}`,
         childName: this.normalizeText(child.name),
+        door: child.door || section.door || "",
+        entrySide: child.entrySide || section.entrySide || "",
       }));
     });
   }
 
+  csvHasField(field) {
+    return this.sections.some((s) =>
+      s[field] || (s.children || []).some((c) => c[field])
+    );
+  }
+
   generateCSVOutput() {
-    const headers = ["Parent Code", "Parent Name", "Child Code", "Child Name"];
     const rows = this.getCSVOutputRows();
+    const hasDoor = this.csvHasField("door");
+    const hasEntrySide = this.csvHasField("entrySide");
+
+    const headers = ["Parent Code", "Parent Name", "Child Code", "Child Name"];
+    if (hasDoor) headers.push("Door");
+    if (hasEntrySide) headers.push("Entry Side");
 
     return [
       headers.join(","),
-      ...rows.map((row) => [
-        row.parentCode,
-        row.parentName,
-        row.childCode,
-        row.childName,
-      ].map((cell) => this.escapeCSVCell(cell)).join(",")),
+      ...rows.map((row) => {
+        const cells = [row.parentCode, row.parentName, row.childCode, row.childName];
+        if (hasDoor) cells.push(row.door);
+        if (hasEntrySide) cells.push(row.entrySide);
+        return cells.map((cell) => this.escapeCSVCell(cell)).join(",");
+      }),
     ].join("\n");
   }
 
@@ -1414,19 +1908,45 @@ class LayoutGenerator {
   }
 
   resetAll() {
-    if (!confirm("¿Resetear todo? Se borrarán todas las secciones y configuración.")) return;
-    this.config = {
-      name: "",
-      code: "",
-      maxCapacityByFan: 3,
-      image: { small: "", medium: "", large: "" },
-    };
-    this.sections = [];
-    localStorage.removeItem(this.STORAGE_KEY);
-    this.activeTab = "config";
-    this.renderTabs();
-    this.renderActiveTab();
-    this.toast("Todo reseteado", "success");
+    const existing = document.getElementById("resetOverlay");
+    if (existing) existing.remove();
+
+    const overlay = document.createElement("div");
+    overlay.id = "resetOverlay";
+    overlay.className = "reset-overlay";
+    overlay.innerHTML = `
+      <div class="reset-modal">
+        <div class="reset-title">Resetear <strong>toda la herramienta</strong>? Se borrarán todas las secciones y configuración.</div>
+        <div class="reset-actions">
+          <button class="btn btn-secondary btn-sm" id="resetCancel" type="button">Cancelar</button>
+          <button class="btn btn-danger btn-sm" id="resetAccept" type="button">Resetear todo</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    const close = () => overlay.remove();
+    document.getElementById("resetCancel").addEventListener("click", close);
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+    document.addEventListener("keydown", function handler(e) {
+      if (e.key === "Escape") { close(); document.removeEventListener("keydown", handler); }
+    });
+
+    document.getElementById("resetAccept").addEventListener("click", () => {
+      close();
+      this.config = {
+        name: "",
+        code: "",
+        maxCapacityByFan: 3,
+        image: { small: "", medium: "", large: "" },
+      };
+      this.sections = [];
+      this.expandedSections.clear();
+      localStorage.removeItem(this.STORAGE_KEY);
+      this.activeTab = "config";
+      this.renderTabs();
+      this.renderActiveTab();
+      this.toast("Todo reseteado", "success");
+    });
   }
 
   /* ═══════════════ UTILS ═══════════════ */
