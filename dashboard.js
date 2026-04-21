@@ -78,6 +78,15 @@ const TOOLS = [
         path: 'tools/ventas-masivas/index.html',
         accentColor: '#14b8a6',
     },
+    {
+        id: 'presale-config',
+        name: 'Pre Sale Config',
+        subtitle: 'Email Whitelist Builder',
+        description: 'Armá el JSON de configuración de Pre Sale mergeando listas de emails sobre una config existente, con dedup y validación.',
+        icon: '📧',
+        path: 'tools/presale-config/index.html',
+        accentColor: '#6366f1',
+    },
 ];
 
 function renderTools() {

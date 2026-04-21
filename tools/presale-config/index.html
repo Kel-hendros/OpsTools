@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pre Sale Config - Ops Tools</title>
+    <meta name="description" content="Armado de configuración JSON de Pre Sale a partir de listas de emails.">
+    <link rel="stylesheet" href="index.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div id="app">
+        <header class="app-header">
+            <div class="logo">
+                <a href="../../index.html" class="back-home" title="Volver a Ops Tools">&larr; Ops Tools</a>
+                <span class="logo-icon">📧</span>
+                <h1>Pre Sale Config <span class="tagline">— Email Whitelist Builder</span></h1>
+            </div>
+            <div class="header-actions">
+                <button id="resetAll" class="btn btn-secondary btn-sm" type="button">
+                    <span class="icon">🗑️</span> Resetear todo
+                </button>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <nav class="tabs-nav" id="tabsNav"></nav>
+            <div class="tab-content" id="tabContent"></div>
+        </main>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
