@@ -79,6 +79,15 @@ const TOOLS = [
         accentColor: '#14b8a6',
     },
     {
+        id: 'layout-interpreter',
+        name: 'Layout Interpreter',
+        subtitle: 'Manifiesto → Layout JSON',
+        description: 'Interpretá manifiestos de estadio (formato BAN) a Layout JSON de Fanki: agrupa secciones, detecta numerado/sin-numerar, mapea colores y completás el resto rápido.',
+        icon: '🧩',
+        path: 'tools/layout-interpreter/index.html',
+        accentColor: '#0ea5e9',
+    },
+    {
         id: 'presale-config',
         name: 'Pre Sale Config',
         subtitle: 'Email Whitelist Builder',
